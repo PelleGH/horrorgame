@@ -8,6 +8,7 @@ Shader "Custom/AsciiPost"
 		_GlyphCount("Glyph Count", Float) = 10
 		_Tint("Tint", Color) = (1,1,1,1)
 		_UseColor("Use Source Color", Float) = 1
+		_TargetColumns("Target Columns", Float) = 160
 	}
 
 		SubShader
@@ -37,6 +38,7 @@ Shader "Custom/AsciiPost"
 				float _GlyphCount;
 				float4 _Tint;
 				float _UseColor;
+				float _TargetColumns;
 
 				struct Attributes
 				{
@@ -77,7 +79,13 @@ Shader "Custom/AsciiPost"
 					float2 screenSize = _ScreenParams.xy;
 					float2 pixel = input.uv * screenSize;
 
-					float2 cellSize = _CellSize.xy;
+					float screenWidth = _ScreenParams.x;
+					float cellWidth = screenWidth / _TargetColumns;
+
+					// maintain aspect ratio (characters taller than wide)
+					float cellHeight = cellWidth * 1.5;
+
+					float2 cellSize = float2(cellWidth, cellHeight);
 					float2 cellCoord = floor(pixel / cellSize);
 					float2 localCoord = floor(frac(pixel / cellSize) * cellSize) / cellSize;
 
