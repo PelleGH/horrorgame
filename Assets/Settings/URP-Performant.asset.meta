@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: a6560a915ef98420e9faacc1c7438823
+guid: d0e2fc18fe036412f8223b3b3d9ad574
 NativeFormatImporter:
   externalObjects: {}
   mainObjectFileID: 0
@@ -11,5 +11,5 @@ AssetOrigin:
   productId: 288108
   packageName: Vintage Retro Room URP
   packageVersion: 1.0
-  assetPath: Assets/Settings/SampleSceneProfile.asset
+  assetPath: Assets/Settings/URP-Performant.asset
   uploadId: 676855

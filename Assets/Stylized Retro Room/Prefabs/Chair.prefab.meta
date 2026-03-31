@@ -1,8 +1,7 @@
 fileFormatVersion: 2
-guid: a6560a915ef98420e9faacc1c7438823
-NativeFormatImporter:
+guid: c7de364ae02b09e45b0ba20cd6f5eb68
+PrefabImporter:
   externalObjects: {}
-  mainObjectFileID: 0
   userData: 
   assetBundleName: 
   assetBundleVariant: 
@@ -11,5 +10,5 @@ AssetOrigin:
   productId: 288108
   packageName: Vintage Retro Room URP
   packageVersion: 1.0
-  assetPath: Assets/Settings/SampleSceneProfile.asset
+  assetPath: Assets/Stylized Retro Room/Prefabs/Chair.prefab
   uploadId: 676855

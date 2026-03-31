@@ -1,8 +1,7 @@
 fileFormatVersion: 2
-guid: a6560a915ef98420e9faacc1c7438823
-NativeFormatImporter:
+guid: cbbc217ff57c7ee41b2fae4e6080e0b6
+PrefabImporter:
   externalObjects: {}
-  mainObjectFileID: 0
   userData: 
   assetBundleName: 
   assetBundleVariant: 
@@ -11,5 +10,5 @@ AssetOrigin:
   productId: 288108
   packageName: Vintage Retro Room URP
   packageVersion: 1.0
-  assetPath: Assets/Settings/SampleSceneProfile.asset
+  assetPath: Assets/Stylized Retro Room/Prefabs/Keys.prefab
   uploadId: 676855
