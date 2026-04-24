@@ -57,9 +57,8 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     private float crouchHeight;
     private Vector3 normalCenter;
     private Vector3 crouchCenter;
-
+    public bool isInspecting;
     private bool isCrouching;
-
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -93,8 +92,12 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
     void Update()
     {
-        Look();
-        Move();
+        if (!isInspecting)
+        {
+            Look();
+            Move();
+        }
+
         UpdateCameraHeight();
     }
 

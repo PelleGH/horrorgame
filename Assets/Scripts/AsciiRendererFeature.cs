@@ -34,14 +34,19 @@ public class AsciiRendererFeature : ScriptableRendererFeature
         asciiPass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
     }
 
-    public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
-    {
-        if (asciiPass == null || settings.glyphAtlas == null)
-            return;
+public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
+{
+    if (asciiPass == null || settings.glyphAtlas == null)
+        return;
 
-        if (renderingData.cameraData.cameraType == CameraType.Game)
-            renderer.EnqueuePass(asciiPass);
-    }
+    if (renderingData.cameraData.cameraType != CameraType.Game)
+        return;
+
+    if (renderingData.cameraData.renderType != CameraRenderType.Base)
+        return;
+
+    renderer.EnqueuePass(asciiPass);
+}
 
     protected override void Dispose(bool disposing)
     {
@@ -89,10 +94,23 @@ public class AsciiRendererFeature : ScriptableRendererFeature
             material.SetFloat(ContrastId, settings.contrast);
             material.SetFloat(ColorStepsId, settings.colorSteps);
 
-            RenderGraphUtils.BlitMaterialParameters blitParams =
-                new (src, src, material, 0);
+            TextureDesc desc = renderGraph.GetTextureDesc(src);
+            desc.name = "AsciiTemp";
+            desc.clearBuffer = false;
 
-            renderGraph.AddBlitPass(blitParams, k_PassName);
+            TextureHandle temp = renderGraph.CreateTexture(desc);
+
+            // Apply ASCII into temp
+            renderGraph.AddBlitPass(
+                new RenderGraphUtils.BlitMaterialParameters(src, temp, material, 0),
+                k_PassName
+            );
+
+            // Copy temp back into camera color
+            renderGraph.AddBlitPass(
+                new RenderGraphUtils.BlitMaterialParameters(temp, src, material, 0),
+                "ASCII Copy Back"
+            );
         }
     }
 }
