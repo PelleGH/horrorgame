@@ -148,7 +148,6 @@ GameObject:
   - component: {fileID: 861319098015093015}
   - component: {fileID: 640252991848981347}
   - component: {fileID: 1908617257171588281}
-  - component: {fileID: 7245850018031065338}
   - component: {fileID: 8706895932312586567}
   - component: {fileID: 3648201827958366877}
   m_Layer: 0
@@ -231,29 +230,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!136 &7245850018031065338
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4708045582468190602}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &8706895932312586567
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -270,9 +246,25 @@ MonoBehaviour:
   sprintSpeed: 8
   jumpHeight: 1.2
   gravity: -20
+  crouchSpeed: 2.5
+  crouchHeightMultiplier: 0.4
+  crouchBlockLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  headCheckPadding: 0.02
   mouseSensitivity: 2
   cameraTransform: {fileID: 0}
   maxLookAngle: 80
+  footstepSource: {fileID: 0}
+  footstepClips: []
+  walkStepInterval: 0.5
+  sprintStepInterval: 0.35
+  minMoveThreshold: 0.1
+  footstepPitchRange: {x: 0.95, y: 1.05}
+  footstepVolumeRange: {x: 0.9, y: 1}
+  crouchStepInterval: 0.7
+  crouchVolumeRange: {x: 0.4, y: 0.6}
+  crouchPitchRange: {x: 0.85, y: 0.95}
 --- !u!143 &3648201827958366877
 CharacterController:
   m_ObjectHideFlags: 0
