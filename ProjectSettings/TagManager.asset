@@ -13,7 +13,7 @@ TagManager:
   - UI
   - interactLayer
   - Player
-  - InspectItem
+  - inspectableMask
   - 
   - 
   - 
