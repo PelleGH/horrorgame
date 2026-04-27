@@ -129,5 +129,25 @@ MonoBehaviour:
   player: {fileID: 0}
   lookMode: 0
   activationRadius: 5
+  returnToRestWhenInactive: 1
+  localForwardAxis: 4
+  localUpAxis: 2
+  rotateWholeEye: 1
+  maxYaw: 45
+  maxPitch: 30
   rotationSpeed: 360
-  rotationOffset: 90
+  pupil: {fileID: 0}
+  movePupil: 0
+  pupilMaxHorizontalOffset: 0.025
+  pupilMaxVerticalOffset: 0.015
+  pupilMoveSpeed: 12
+  blinkMode: 0
+  blinkRenderer: {fileID: 0}
+  blinkBlendShapeIndex: 0
+  autoBlink: 1
+  blinkIntervalRange: {x: 2.5, y: 6}
+  blinkCloseTime: 0.06
+  blinkHoldTime: 0.03
+  blinkOpenTime: 0.08
+  blinkMaxWeight: 100
+  drawDebug: 1
