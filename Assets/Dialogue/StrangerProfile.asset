@@ -16,6 +16,24 @@ MonoBehaviour:
   nameColor: {r: 0.52, g: 0.36, b: 0.34, a: 0.9}
   textColor: {r: 0.7, g: 0.7, b: 0.66, a: 0.95}
   speedMultiplier: 0.7
-  blipClip: {fileID: 0}
-  blipVolume: 0.4
-  blipPitchRange: {x: 0.9, y: 1.1}
+  voice:
+    clips: []
+    volume: 0.5
+    muffle: 0.65
+    distortion: 0.3
+    basePitch: 0.6
+    scale: 0
+    pitchSpread: 0.5
+    jitterSemitones: 0.25
+    driftSemitones: 0.8
+    wordStressSemitones: 0.4
+    volumeJitter: 0.15
+    questionLift: 3
+    exclamationBoost: 1.5
+    exclamationVolume: 0.2
+    periodFall: -2.5
+    ellipsisDrop: -4
+    ellipsisVolume: 0.5
+    soundEveryNLetters: 4
+    voiceCapitals: 1
+    capitalAccent: 0.8

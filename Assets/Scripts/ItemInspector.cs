@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿
+using System.Collections;
 using UnityEngine;
 
 public class ItemInspector : MonoBehaviour
@@ -16,10 +17,7 @@ public class ItemInspector : MonoBehaviour
     public SimpleFPSControllerNewInput playerController;
 
     [Header("Interaction")]
-    public float inspectRange = 3f;
-    public KeyCode inspectKey = KeyCode.E;
     public KeyCode cancelKey = KeyCode.Escape;
-    public LayerMask inspectableMask;
 
     [Header("Inspect Feel")]
     public float transitionDuration = 0.28f;
@@ -36,6 +34,11 @@ public class ItemInspector : MonoBehaviour
 
     private InspectState state = InspectState.Idle;
 
+    public bool IsBusy => state != InspectState.Idle;
+
+    public bool IsInspecting =>
+        state == InspectState.Inspecting;
+
     private InspectableItem currentItem;
     private Transform inspectedTransform;
 
@@ -49,6 +52,8 @@ public class ItemInspector : MonoBehaviour
     private Vector3 originalLocalScale;
 
     private Collider[] inspectedColliders;
+    private bool[] originalColliderEnabled;
+
     private Rigidbody inspectedRigidbody;
     private bool originalKinematicState;
 
@@ -56,99 +61,113 @@ public class ItemInspector : MonoBehaviour
     private Coroutine transitionCoroutine;
 
     private float currentInspectDistance;
-
-    // Detta är nyckeln:
-    // Den sparar var objektets visuella center finns lokalt i objektet.
     private Vector3 visualCenterLocalOffset;
 
     private void Update()
     {
-        switch (state)
+        if (state != InspectState.Inspecting)
+            return;
+
+        // E is handled by PlayerInteract.
+        // Escape can still cancel here.
+        if (Input.GetKeyDown(cancelKey))
         {
-            case InspectState.Idle:
-                if (Input.GetKeyDown(inspectKey) && !DialogueManager.IsBusy)
-                    TryStartInspect();
-                break;
-
-            case InspectState.Inspecting:
-                if (Input.GetKeyDown(inspectKey) || Input.GetKeyDown(cancelKey))
-                {
-                    BeginStopInspect();
-                    return;
-                }
-
-                HandleZoom();
-                HandleRotation();
-
-                if (Input.GetKeyDown(resetRotationKey))
-                    ResetRotationButKeepCentered();
-
-                break;
+            StopInspect();
+            return;
         }
+
+        HandleZoom();
+        HandleRotation();
+
+        if (Input.GetKeyDown(resetRotationKey))
+            ResetRotationButKeepCentered();
     }
 
     private void LateUpdate()
     {
-        if (state == InspectState.Inspecting && currentItem != null && inspectedTransform != null)
+        if (state == InspectState.Inspecting &&
+            currentItem != null &&
+            inspectedTransform != null)
         {
             UpdateInspectPosition();
         }
     }
 
-    private void TryStartInspect()
+    // Called by PlayerInteract through InspectableItem.
+    public bool BeginInspect(InspectableItem item)
     {
-        if (playerCamera == null)
+        if (!isActiveAndEnabled ||
+            state != InspectState.Idle ||
+            item == null ||
+            DialogueManager.IsBusy ||
+            (playerController != null &&
+             playerController.isInspecting))
         {
-            Debug.LogWarning("ItemInspector: Missing playerCamera.");
-            return;
+            return false;
         }
 
-        Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+        if (playerCamera == null)
+        {
+            Debug.LogWarning(
+                "ItemInspector: Missing playerCamera."
+            );
+            return false;
+        }
 
-        int mask = inspectableMask == 0 ? ~0 : inspectableMask;
-
-        if (!Physics.Raycast(ray, out RaycastHit hit, inspectRange, mask, QueryTriggerInteraction.Ignore))
-            return;
-
-        InspectableItem item = hit.collider.GetComponentInParent<InspectableItem>();
-
-        if (item == null)
-            return;
-
-        StartInspect(item);
-    }
-
-    private void StartInspect(InspectableItem item)
-    {
         currentItem = item;
         inspectedTransform = item.transform;
 
+        // Save original transform.
         originalPosition = inspectedTransform.position;
         originalRotation = inspectedTransform.rotation;
         originalScale = inspectedTransform.localScale;
         originalParent = inspectedTransform.parent;
 
-        originalLocalPosition = inspectedTransform.localPosition;
-        originalLocalRotation = inspectedTransform.localRotation;
-        originalLocalScale = inspectedTransform.localScale;
+        originalLocalPosition =
+            inspectedTransform.localPosition;
 
-        // Räkna ut objektets visuella centrum innan colliders stängs av.
-        Vector3 visualCenterWorld = GetVisualCenterWorld(inspectedTransform);
-        visualCenterLocalOffset = inspectedTransform.InverseTransformPoint(visualCenterWorld);
+        originalLocalRotation =
+            inspectedTransform.localRotation;
 
-        inspectedColliders = inspectedTransform.GetComponentsInChildren<Collider>();
+        originalLocalScale =
+            inspectedTransform.localScale;
 
-        foreach (Collider col in inspectedColliders)
+        // Calculate the visual center before disabling colliders.
+        Vector3 visualCenterWorld =
+            GetVisualCenterWorld(inspectedTransform);
+
+        visualCenterLocalOffset =
+            inspectedTransform.InverseTransformPoint(
+                visualCenterWorld
+            );
+
+        // Temporarily disable colliders.
+        inspectedColliders =
+            inspectedTransform.GetComponentsInChildren<Collider>();
+
+        originalColliderEnabled =
+            new bool[inspectedColliders.Length];
+
+        for (int i = 0; i < inspectedColliders.Length; i++)
         {
-            if (col != null)
-                col.enabled = false;
+            Collider col = inspectedColliders[i];
+
+            if (col == null)
+                continue;
+
+            originalColliderEnabled[i] = col.enabled;
+            col.enabled = false;
         }
 
-        inspectedRigidbody = inspectedTransform.GetComponent<Rigidbody>();
+        // Freeze rigidbody physics.
+        inspectedRigidbody =
+            inspectedTransform.GetComponent<Rigidbody>();
 
         if (inspectedRigidbody != null)
         {
-            originalKinematicState = inspectedRigidbody.isKinematic;
+            originalKinematicState =
+                inspectedRigidbody.isKinematic;
+
             inspectedRigidbody.isKinematic = true;
             inspectedRigidbody.angularVelocity = Vector3.zero;
 
@@ -159,24 +178,33 @@ public class ItemInspector : MonoBehaviour
 #endif
         }
 
+        // Detach while inspecting.
         inspectedTransform.SetParent(null, true);
 
         currentInspectDistance = currentItem.desiredDistance;
 
-        Vector3 targetCenterPosition = GetTargetCenterPosition();
+        Vector3 targetCenterPosition =
+            GetTargetCenterPosition();
 
-        // Viktigt:
-        // Vi behåller originalRotation.
-        // Objektet vrids alltså INTE automatiskt vid uppplockning.
         Quaternion targetRotation = originalRotation;
 
-        Vector3 targetScale = currentItem.overrideScale ? currentItem.inspectScale : inspectedTransform.localScale;
-        Vector3 targetPivotPosition = GetPivotPositionForCenteredObject(targetCenterPosition, targetRotation, targetScale);
+        Vector3 targetScale = currentItem.overrideScale
+            ? currentItem.inspectScale
+            : inspectedTransform.localScale;
 
+        Vector3 targetPivotPosition =
+            GetPivotPositionForCenteredObject(
+                targetCenterPosition,
+                targetRotation,
+                targetScale
+            );
+
+        // Freeze player movement and camera look.
         if (playerController != null)
             playerController.isInspecting = true;
 
         positionVelocity = Vector3.zero;
+
         state = InspectState.PickingUp;
 
         if (transitionCoroutine != null)
@@ -194,17 +222,27 @@ public class ItemInspector : MonoBehaviour
                 InspectState.Inspecting
             )
         );
+
+        return true;
+    }
+
+    // Called by PlayerInteract on E, or internally on Escape.
+    public bool StopInspect()
+    {
+        if (state != InspectState.Inspecting)
+            return false;
+
+        BeginStopInspect();
+        return true;
     }
 
     private void BeginStopInspect()
     {
-        if (currentItem == null || inspectedTransform == null)
+        if (currentItem == null ||
+            inspectedTransform == null)
             return;
 
         state = InspectState.PuttingDown;
-
-        if (playerController != null)
-            playerController.isInspecting = false;
 
         if (transitionCoroutine != null)
             StopCoroutine(transitionCoroutine);
@@ -226,44 +264,66 @@ public class ItemInspector : MonoBehaviour
 
     private void FinishStopInspect()
     {
-        if (inspectedTransform == null)
-            return;
+        if (inspectedTransform != null)
+        {
+            inspectedTransform.SetParent(originalParent, false);
 
-        inspectedTransform.SetParent(originalParent, false);
-        inspectedTransform.localPosition = originalLocalPosition;
-        inspectedTransform.localRotation = originalLocalRotation;
-        inspectedTransform.localScale = originalLocalScale;
+            inspectedTransform.localPosition =
+                originalLocalPosition;
 
+            inspectedTransform.localRotation =
+                originalLocalRotation;
+
+            inspectedTransform.localScale =
+                originalLocalScale;
+        }
+
+        // Restore colliders to their previous enabled states.
         if (inspectedColliders != null)
         {
-            foreach (Collider col in inspectedColliders)
+            for (int i = 0; i < inspectedColliders.Length; i++)
             {
-                if (col != null)
-                    col.enabled = true;
+                Collider col = inspectedColliders[i];
+
+                if (col != null &&
+                    originalColliderEnabled != null)
+                {
+                    col.enabled = originalColliderEnabled[i];
+                }
             }
         }
 
         if (inspectedRigidbody != null)
-            inspectedRigidbody.isKinematic = originalKinematicState;
+        {
+            inspectedRigidbody.isKinematic =
+                originalKinematicState;
+        }
+
+        if (playerController != null)
+            playerController.isInspecting = false;
 
         currentItem = null;
         inspectedTransform = null;
         inspectedColliders = null;
+        originalColliderEnabled = null;
         inspectedRigidbody = null;
         originalParent = null;
+
         positionVelocity = Vector3.zero;
         transitionCoroutine = null;
     }
 
     private void UpdateInspectPosition()
     {
-        Vector3 targetCenterPosition = GetTargetCenterPosition();
+        Vector3 targetCenterPosition =
+            GetTargetCenterPosition();
 
-        Vector3 targetPivotPosition = GetPivotPositionForCenteredObject(
-            targetCenterPosition,
-            inspectedTransform.rotation,
-            inspectedTransform.localScale
-        );
+        Vector3 targetPivotPosition =
+            GetPivotPositionForCenteredObject(
+                targetCenterPosition,
+                inspectedTransform.rotation,
+                inspectedTransform.localScale
+            );
 
         inspectedTransform.position = Vector3.SmoothDamp(
             inspectedTransform.position,
@@ -278,7 +338,8 @@ public class ItemInspector : MonoBehaviour
         Vector3 camPos = playerCamera.transform.position;
         Vector3 forward = playerCamera.transform.forward;
 
-        float targetDistance = GetObstructedDistance(currentInspectDistance);
+        float targetDistance =
+            GetObstructedDistance(currentInspectDistance);
 
         return camPos + forward * targetDistance;
     }
@@ -306,9 +367,16 @@ public class ItemInspector : MonoBehaviour
         return desiredDistance;
     }
 
-    private Vector3 GetPivotPositionForCenteredObject(Vector3 targetCenterPosition, Quaternion rotation, Vector3 scale)
+    private Vector3 GetPivotPositionForCenteredObject(
+        Vector3 targetCenterPosition,
+        Quaternion rotation,
+        Vector3 scale)
     {
-        Vector3 scaledLocalOffset = Vector3.Scale(visualCenterLocalOffset, scale);
+        Vector3 scaledLocalOffset = Vector3.Scale(
+            visualCenterLocalOffset,
+            scale
+        );
+
         Vector3 worldOffset = rotation * scaledLocalOffset;
 
         return targetCenterPosition - worldOffset;
@@ -316,26 +384,32 @@ public class ItemInspector : MonoBehaviour
 
     private Vector3 GetVisualCenterWorld(Transform root)
     {
-        Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
+        Renderer[] renderers =
+            root.GetComponentsInChildren<Renderer>();
 
         if (renderers.Length > 0)
         {
             Bounds bounds = renderers[0].bounds;
 
             for (int i = 1; i < renderers.Length; i++)
+            {
                 bounds.Encapsulate(renderers[i].bounds);
+            }
 
             return bounds.center;
         }
 
-        Collider[] colliders = root.GetComponentsInChildren<Collider>();
+        Collider[] colliders =
+            root.GetComponentsInChildren<Collider>();
 
         if (colliders.Length > 0)
         {
             Bounds bounds = colliders[0].bounds;
 
             for (int i = 1; i < colliders.Length; i++)
+            {
                 bounds.Encapsulate(colliders[i].bounds);
+            }
 
             return bounds.center;
         }
@@ -351,10 +425,18 @@ public class ItemInspector : MonoBehaviour
             return;
 
         float minDistance = currentItem.minDistance;
-        float maxDistance = currentItem.desiredDistance + extraZoomOutDistance;
+
+        float maxDistance =
+            currentItem.desiredDistance +
+            extraZoomOutDistance;
 
         currentInspectDistance -= scroll * zoomSpeed;
-        currentInspectDistance = Mathf.Clamp(currentInspectDistance, minDistance, maxDistance);
+
+        currentInspectDistance = Mathf.Clamp(
+            currentInspectDistance,
+            minDistance,
+            maxDistance
+        );
     }
 
     private void HandleRotation()
@@ -365,7 +447,10 @@ public class ItemInspector : MonoBehaviour
         float mouseX = Input.GetAxisRaw("Mouse X");
         float mouseY = Input.GetAxisRaw("Mouse Y");
 
-        Vector3 center = inspectedTransform.TransformPoint(visualCenterLocalOffset);
+        Vector3 center =
+            inspectedTransform.TransformPoint(
+                visualCenterLocalOffset
+            );
 
         inspectedTransform.RotateAround(
             center,
@@ -385,13 +470,20 @@ public class ItemInspector : MonoBehaviour
         if (inspectedTransform == null)
             return;
 
-        Vector3 centerBeforeReset = inspectedTransform.TransformPoint(visualCenterLocalOffset);
+        Vector3 centerBeforeReset =
+            inspectedTransform.TransformPoint(
+                visualCenterLocalOffset
+            );
 
         inspectedTransform.rotation = originalRotation;
 
-        Vector3 centerAfterReset = inspectedTransform.TransformPoint(visualCenterLocalOffset);
+        Vector3 centerAfterReset =
+            inspectedTransform.TransformPoint(
+                visualCenterLocalOffset
+            );
 
-        inspectedTransform.position += centerBeforeReset - centerAfterReset;
+        inspectedTransform.position +=
+            centerBeforeReset - centerAfterReset;
     }
 
     private IEnumerator TransitionItem(
@@ -415,9 +507,14 @@ public class ItemInspector : MonoBehaviour
             float t = elapsed / duration;
             t = Mathf.SmoothStep(0f, 1f, t);
 
-            inspectedTransform.position = Vector3.Lerp(startPosition, targetPosition, t);
-            inspectedTransform.rotation = Quaternion.Slerp(startRotation, targetRotation, t);
-            inspectedTransform.localScale = Vector3.Lerp(startScale, targetScale, t);
+            inspectedTransform.position =
+                Vector3.Lerp(startPosition, targetPosition, t);
+
+            inspectedTransform.rotation =
+                Quaternion.Slerp(startRotation, targetRotation, t);
+
+            inspectedTransform.localScale =
+                Vector3.Lerp(startScale, targetScale, t);
 
             elapsed += Time.deltaTime;
             yield return null;
@@ -442,12 +539,8 @@ public class ItemInspector : MonoBehaviour
             StopCoroutine(transitionCoroutine);
 
         if (currentItem != null)
-        {
-            if (playerController != null)
-                playerController.isInspecting = false;
-
             FinishStopInspect();
-            state = InspectState.Idle;
-        }
+
+        state = InspectState.Idle;
     }
 }
