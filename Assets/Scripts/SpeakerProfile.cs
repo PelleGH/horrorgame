@@ -14,8 +14,7 @@ public class SpeakerProfile : ScriptableObject
     [Header("Typing")]
     [Tooltip("Multiplies the manager's typing speed. Below 1 is slower.")]
     public float speedMultiplier = 1f;
-    [Tooltip("Optional. Overrides the manager's typing blip.")]
-    public AudioClip blipClip;
-    [Range(0f, 1f)] public float blipVolume = 0.4f;
-    public Vector2 blipPitchRange = new Vector2(0.9f, 1.1f);
+
+    [Header("Voice")]
+    public VoiceSettings voice = new VoiceSettings();
 }

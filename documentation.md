@@ -49,7 +49,10 @@ Only one dialogue can run at a time. `StartDialogue` returns `false` if one is a
 |---|---|
 | `DialogueAsset.cs` | ScriptableObject holding the content: lines, choices, optional `next`. |
 | `dialouge.cs` | Plain data classes `DialogueLine` and `DialogueChoice` (the filename keeps its original spelling). |
-| `SpeakerProfile.cs` | ScriptableObject for a character's look and sound. |
+| `SpeakerProfile.cs` | ScriptableObject for a character's look and voice. |
+| `VoiceSettings.cs` | Serializable settings for a babble voice (blip clips, pitch map, punctuation contours). |
+| `VoiceContour.cs` | Pure logic that turns a line of text into a melody (one `VoiceNote` per character). |
+| `DialogueVoice.cs` | Plays the melody through a small pool of AudioSources. Added by `DialogueManager`. |
 | `DialogueTrigger.cs` | Component on the world object. Starts dialogue, handles highlight and events. |
 | `DialogueManager.cs` | Singleton that plays dialogue. Owns the UI, input, typewriter, choices, camera focus. |
 | `DialogueState.cs` | Static record of which assets have been played this session. |
@@ -88,8 +91,8 @@ StrangerIntro ──choice "Where is the train?"──▶ StrangerTrain ──�
 ### `SpeakerProfile`
 
 Create via **Create → Dialogue → Speaker Profile**. Sets `displayName`, `nameColor`, `textColor`,
-`speedMultiplier` (below 1 = slower typing), and an optional `blipClip` with volume and pitch range
-that overrides the manager's default blip.
+`speedMultiplier` (below 1 = slower typing), and the character's `voice` (see [Voice](#voice-animalese-style-babble)).
+Lines without a profile use `DialogueManager.defaultVoice`.
 
 ## The trigger: `DialogueTrigger`
 
@@ -108,6 +111,53 @@ that overrides the manager's default blip.
 
 Line indexes are relative to the asset being played. `lineEvents` only fire for the asset the trigger started,
 not for assets reached through choices. `onLineStarted(int)` fires for those too.
+
+## Voice (Animalese-style babble)
+
+As each character appears, a short vowel-like sound plays at a pitch chosen from the text, so speech sounds like
+a mumbled human voice instead of a beep. It needs no recorded audio: with no clips assigned it synthesises its own
+voice (a glottal pulse run through vowel resonances, one sound each for a, e, i, o, u and a neutral "uh").
+A letter plays its own vowel; a consonant borrows the next vowel in its word, so "hello" flows like syllables.
+
+**How it works**
+
+```
+ShowLine ─▶ visible text ─▶ VoiceContour.Build() ─▶ VoiceNote[] (one per character, planned once)
+typewriter reveals chars ─▶ DialogueVoice.PlayRange() ─▶ one blip per frame at most
+```
+
+The whole melody is planned when the line starts, then looked up by character index as the typewriter
+reveals text. That keeps audio in sync with the text, allows look-ahead for punctuation, and costs almost
+nothing per frame. The plan is seeded from the line's text, so the same line always sounds the same.
+
+**What shapes the pitch** (all in `VoiceSettings`):
+
+| Input | Effect |
+|---|---|
+| Letter | Each a–z maps to a semitone offset from the chosen scale (`Pentatonic` by default; `Custom` lets you set all 26). Other letters (å, ä, ö, é) get a stable fallback pitch so they are not silent. |
+| `basePitch` | The voice's register. Below 1 is deeper, and the vowels shift down with it, which also sounds darker. |
+| `muffle` | Low-pass filter, 0 = clear, 1 = very dark and muffled. |
+| `distortion` | Gritty, crushed sound. 0 = clean, 1 = heavy. Uses Unity's `AudioDistortionFilter`, applied before the muffle filter, and works with your own clips too. |
+| Jitter and drift | Small random variation per letter plus a slow wander across the sentence, so it never sounds mechanical. |
+| Word stress | First letter of a word is lifted slightly, the last dips. |
+| `?` | Pitch rises over the last four letters (`questionLift`). |
+| `!` | Higher and louder (`exclamationBoost`, `exclamationVolume`). |
+| `.` | Falls slightly (`periodFall`). |
+| `...` | Drops and gets quieter (`ellipsisDrop`, `ellipsisVolume`). |
+| `soundEveryNLetters` | Thins out the sounds. The first letter of every word always sounds. |
+
+Spaces, punctuation and rich-text tags are never voiced.
+
+**Authoring**
+
+- Per character: set `voice` on the `SpeakerProfile`. `StrangerProfile` (deep, slow, falling) and `VisitorProfile` (high, quick, bouncy) are examples.
+- Your own sound: put short clips (60–100 ms, soft attack) into `voice.clips`. Several variants sound less repetitive.
+- Try it: in the test scene choose **"Say something."** in the Stranger's conversation. It plays a question, an exclamation, an ellipsis, Swedish letters and tags.
+
+**Why a pool of AudioSources:** `AudioSource.pitch` is per source, so re-pitching one source with `PlayOneShot`
+would also change blips that are still playing. `DialogueVoice` round-robins four sources so each blip keeps its own pitch.
+
+**Skipping:** pressing E mid-line stops the voice immediately.
 
 ## Systems worth knowing
 
@@ -157,7 +207,7 @@ DialogueState.HasPlayed(asset) / GetPlayCount(asset) / MarkPlayed(asset) / Reset
 - **New NPC, same conversation:** add a `DialogueTrigger` and point it at the existing asset.
 - **NPC says something different on the second visit:** fill in `repeatDialogue`.
 - **Trigger something mid-conversation:** add a `lineEvents` entry with the line index and wire up the UnityEvent.
-- **Different voice per character:** make a `SpeakerProfile`, assign it on that character's lines.
+- **Different voice per character:** make a `SpeakerProfile`, tune its `voice`, assign it on that character's lines.
 - **Auto-start when entering a room:** add a trigger collider, tick `triggerOnEnter`.
 - **Retune the look:** edit the public fields on `DialogueManager` (put one in the scene, or edit the defaults in code).
 

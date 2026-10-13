@@ -53,11 +53,10 @@ public class DialogueManager : MonoBehaviour
 
     [Header("Typewriter")]
     public float charactersPerSecond = 40f;
-    public AudioClip blipClip;
-    [Range(0f, 1f)] public float blipVolume = 0.4f;
-    [Tooltip("Play a blip every N visible characters.")]
-    public int blipEveryNCharacters = 2;
-    public Vector2 blipPitchRange = new Vector2(0.9f, 1.1f);
+
+    [Header("Voice")]
+    [Tooltip("Babble voice for lines without a speaker profile. A profile's own voice overrides it.")]
+    public VoiceSettings defaultVoice = new VoiceSettings();
 
     [Header("Camera Focus")]
     [Tooltip("Seconds the view takes to turn towards the speaker.")]
@@ -93,6 +92,7 @@ public class DialogueManager : MonoBehaviour
     private GameObject choicePanel;
     private readonly List<TextMeshProUGUI> choiceLabels = new List<TextMeshProUGUI>();
     private AudioSource audioSource;
+    private DialogueVoice voice;
 
     private readonly List<DialogueChoice> activeChoices = new List<DialogueChoice>();
     private DialogueAsset currentAsset;
@@ -109,14 +109,13 @@ public class DialogueManager : MonoBehaviour
     private int choiceIndex;
     private float visibleCharacters;
     private int totalCharacters;
-    private int lastBlipCount;
     private int startFrame = -1;
     private int endFrame = -1;
 
     private float currentSpeed;
-    private AudioClip currentBlip;
-    private float currentBlipVolume;
-    private Vector2 currentBlipPitch;
+    private VoiceSettings currentVoice;
+    private VoiceNote[] currentNotes;
+    private int lastVoiceCount;
 
     private float yawVelocity;
     private float pitchVelocity;
@@ -131,9 +130,12 @@ public class DialogueManager : MonoBehaviour
 
         instance = this;
 
+        // Plays per-line voice clips (DialogueLine.voice). The babble voice has its own sources.
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
         audioSource.spatialBlend = 0f;
+
+        voice = gameObject.AddComponent<DialogueVoice>();
 
         BuildUI();
         panel.SetActive(false);
@@ -231,6 +233,8 @@ public class DialogueManager : MonoBehaviour
         {
             if (pressed)
             {
+                // Skipping cuts the voice instead of letting the rest of the line babble on.
+                voice.StopAll();
                 FinishTyping();
                 return;
             }
@@ -343,10 +347,7 @@ public class DialogueManager : MonoBehaviour
         speakerLabel.color = profile != null ? profile.nameColor : speakerColor;
         bodyLabel.color = profile != null ? profile.textColor : textColor;
 
-        bool profileBlip = profile != null && profile.blipClip != null;
-        currentBlip = profileBlip ? profile.blipClip : blipClip;
-        currentBlipVolume = profileBlip ? profile.blipVolume : blipVolume;
-        currentBlipPitch = profileBlip ? profile.blipPitchRange : blipPitchRange;
+        currentVoice = profile != null && profile.voice != null ? profile.voice : defaultVoice;
         currentSpeed = charactersPerSecond * (profile != null ? Mathf.Max(0.01f, profile.speedMultiplier) : 1f);
 
         bodyLabel.text = line.text ?? string.Empty;
@@ -354,11 +355,21 @@ public class DialogueManager : MonoBehaviour
         bodyLabel.ForceMeshUpdate();
         totalCharacters = bodyLabel.textInfo.characterCount;
 
+        // Plan the whole line's melody now; the typewriter then just looks notes up by character index.
+        // textInfo only holds visible characters, so rich-text tags are never voiced.
+        char[] visible = new char[totalCharacters];
+        for (int i = 0; i < totalCharacters; i++)
+            visible[i] = bodyLabel.textInfo.characterInfo[i].character;
+
+        string visibleText = new string(visible);
+        currentNotes = VoiceContour.Build(visibleText, currentVoice, VoiceContour.Seed(visibleText));
+
         visibleCharacters = 0f;
-        lastBlipCount = 0;
+        lastVoiceCount = 0;
         typing = true;
         continueLabel.gameObject.SetActive(false);
 
+        voice.StopAll();
         audioSource.Stop();
         if (line.voice != null)
         {
@@ -384,24 +395,14 @@ public class DialogueManager : MonoBehaviour
         if (count != bodyLabel.maxVisibleCharacters)
         {
             bodyLabel.maxVisibleCharacters = count;
-            TryPlayBlip(count);
+
+            // Characters [lastVoiceCount, count) were just revealed.
+            voice.PlayRange(currentVoice, currentNotes, lastVoiceCount, count);
+            lastVoiceCount = count;
         }
 
         if (count >= totalCharacters)
             FinishTyping();
-    }
-
-    private void TryPlayBlip(int count)
-    {
-        if (currentBlip == null || blipEveryNCharacters <= 0)
-            return;
-
-        if (count - lastBlipCount < blipEveryNCharacters)
-            return;
-
-        lastBlipCount = count;
-        audioSource.pitch = UnityEngine.Random.Range(currentBlipPitch.x, currentBlipPitch.y);
-        audioSource.PlayOneShot(currentBlip, currentBlipVolume);
     }
 
     private void FinishTyping()
@@ -444,6 +445,7 @@ public class DialogueManager : MonoBehaviour
         endFrame = Time.frameCount;
 
         audioSource.Stop();
+        voice.StopAll();
         ReleasePlayer();
 
         Action callback = onFinished;
