@@ -25,6 +25,16 @@ public class PlayerInteract : MonoBehaviour
 
     private void Update()
     {
+        PocketInventoryController pocket = GetComponent<PocketInventoryController>();
+        if (pocket != null)
+        {
+            pocket.WorldInteractionBusy = DialogueManager.IsBusy || (itemInspector != null && itemInspector.IsBusy);
+            if (pocket.CanTogglePocket)
+            {
+                SetTarget(null);
+                return;
+            }
+        }
         // Inspection mode has priority.
         if (itemInspector != null && itemInspector.IsBusy)
         {

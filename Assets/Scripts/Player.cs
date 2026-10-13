@@ -10,6 +10,10 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     public float jumpHeight = 1.2f;
     public float gravity = -20f;
 
+    [Header("Pocket Inventory")]
+    [Tooltip("Look down and press E to open a small, lit pocket at your waist. No character model is needed.")]
+    public bool enablePocketInventory = true;
+
     [Header("Crouch")]
     public float crouchSpeed = 2.5f;
     [Range(0.2f, 0.8f)]
@@ -20,7 +24,7 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     [Header("Mouse Look")]
     public float mouseSensitivity = 0.1f;
     public Transform cameraTransform;
-    public float maxLookAngle = 80f;
+    public float maxLookAngle = 90f;
 
     [Header("Camera Crouch")]
     public float crouchCameraDrop = 0.5f;
@@ -95,6 +99,9 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
         if (footstepSource == null)
             footstepSource = GetComponent<AudioSource>();
+
+        if (enablePocketInventory && GetComponent<PocketInventoryController>() == null)
+            gameObject.AddComponent<PocketInventoryController>();
     }
 
     void Update()

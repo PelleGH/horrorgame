@@ -254,7 +254,7 @@ MonoBehaviour:
   headCheckPadding: 0.02
   mouseSensitivity: 2
   cameraTransform: {fileID: 0}
-  maxLookAngle: 80
+  maxLookAngle: 90
   footstepSource: {fileID: 0}
   footstepClips: []
   walkStepInterval: 0.5
