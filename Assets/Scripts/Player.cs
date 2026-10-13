@@ -65,6 +65,8 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     public Vector2 crouchPitchRange = new Vector2(0.85f, 0.95f);
 
     private CharacterController controller;
+    private MovingSurfacePassenger movingSurface;
+    private StationaryTrainPassenger trainPassenger;
     private Vector3 velocity;
     private Vector3 horizontalVelocity;
     private Vector3 actualHorizontalVelocity;
@@ -95,6 +97,8 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        movingSurface = GetComponent<MovingSurfacePassenger>();
+        trainPassenger = GetComponent<StationaryTrainPassenger>();
 
         if (cameraTransform != null)
         {
@@ -125,6 +129,9 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
     void Update()
     {
+        if (movingSurface != null) movingSurface.BeginFrame();
+        if (trainPassenger != null)
+            trainPassenger.Step(Time.deltaTime, controller.isGrounded, isCrouching, horizontalVelocity);
         if (!isInspecting)
         {
             Look();
@@ -137,9 +144,11 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
             stepTimer = 0f;
             wasMovingLastFrame = false;
             UpdateStamina(false);
+            if (trainPassenger != null) controller.Move(trainPassenger.ExternalVelocity * Time.deltaTime);
         }
 
         UpdateCameraHeight();
+        if (movingSurface != null) movingSurface.EndFrame();
     }
 
     void Look()
@@ -234,19 +243,27 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
         horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity,
             Mathf.Max(0f, response) * Time.deltaTime);
         Vector3 beforeMove = transform.position;
-        CollisionFlags collisions = controller.Move(horizontalVelocity * Time.deltaTime);
+        Vector3 inheritedVelocity = movingSurface != null ? movingSurface.AirVelocity : Vector3.zero;
+        if (trainPassenger != null) inheritedVelocity += trainPassenger.ExternalVelocity;
+        CollisionFlags collisions = controller.Move((horizontalVelocity + inheritedVelocity) * Time.deltaTime);
         Vector3 displacement = transform.position - beforeMove;
         actualHorizontalVelocity = Time.deltaTime > 0f
             ? new Vector3(displacement.x, 0f, displacement.z) / Time.deltaTime
             : Vector3.zero;
         if ((collisions & CollisionFlags.Sides) != 0)
-            horizontalVelocity = actualHorizontalVelocity;
+        {
+            Vector3 remainingInheritedVelocity = movingSurface != null ? movingSurface.AirVelocity : Vector3.zero;
+            if (trainPassenger != null) remainingInheritedVelocity += trainPassenger.ExternalVelocity;
+            horizontalVelocity = actualHorizontalVelocity
+                - new Vector3(remainingInheritedVelocity.x, 0f, remainingInheritedVelocity.z);
+        }
 
         UpdateStamina(sprinting && actualHorizontalVelocity.magnitude > minMoveThreshold);
 
         bool jumpPressed = Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
         if (jumpPressed && grounded && !crouching)
         {
+            if (movingSurface != null) movingSurface.Detach();
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
 
@@ -257,6 +274,18 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
         bool isMoving = actualHorizontalVelocity.magnitude > minMoveThreshold;
         HandleFootsteps(controller.isGrounded, isMoving, sprinting, crouching);
+    }
+
+    public void ResetMotion()
+    {
+        velocity = Vector3.zero;
+        horizontalVelocity = Vector3.zero;
+        actualHorizontalVelocity = Vector3.zero;
+        hasGroundSample = false;
+        stepTimer = 0f;
+        wasMovingLastFrame = false;
+        if (movingSurface != null) movingSurface.ResetMotion();
+        if (trainPassenger != null) trainPassenger.ResetMotion();
     }
 
     void UpdateStamina(bool spending)
@@ -331,6 +360,7 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
         cameraImpact = Mathf.SmoothDamp(cameraImpact, 0f, ref impactVelocity,
             Mathf.Max(0.01f, impactRecoveryTime));
         localPos.y = cameraBaseY - cameraImpact;
+        if (trainPassenger != null) localPos.y += trainPassenger.CameraHeightOffset;
         cameraTransform.localPosition = localPos;
         float sidewaysSpeed = Vector3.Dot(actualHorizontalVelocity, transform.right);
         float targetRoll = -sidewaysSpeed / Mathf.Max(0.01f, sprintSpeed) * movementCameraLean;
@@ -346,6 +376,7 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
         float shakeZ = (Mathf.PerlinNoise(0.73f, fatigueShakeTime) - 0.5f) * 2f * fatigueShakeStrength;
         angles.x = pitch + shakeX;
         angles.z = cameraRoll + shakeZ;
+        if (trainPassenger != null) angles += trainPassenger.CameraAngles;
         cameraTransform.localEulerAngles = angles;
     }
 
