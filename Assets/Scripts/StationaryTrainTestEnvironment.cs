@@ -7,6 +7,8 @@ using UnityEngine.Rendering;
 public class StationaryTrainTestEnvironment : MonoBehaviour
 {
     public bool startWithRandomJourney;
+    [Tooltip("Optional persistent ride settings. Create one via Assets > Create > Train > Ride Profile.")]
+    public TrainRideProfile rideProfile;
     private StationaryTrainSimulation simulatedTrain;
     private Transform train;
     private SimpleFPSControllerNewInput player;
@@ -64,6 +66,12 @@ public class StationaryTrainTestEnvironment : MonoBehaviour
             new StationaryTrainSimulation.JourneyStage { label = "Hill and rough track", duration = 8f, speed = 6f, uphillDegrees = 5f, roughness = 2f },
             new StationaryTrainSimulation.JourneyStage { label = "Station stop", duration = 12f, speed = 0f }
         };
+        if (rideProfile != null)
+        {
+            simulatedTrain.rideProfile = rideProfile;
+            rideProfile.ApplyTo(simulatedTrain);
+        }
+        simulatedTrain.ResetJourney();
         MakeCommandPad("Red pad - emergency brake", new Vector3(3.4f, 1.62f, -2f), red,
             TrainSimulationTrigger.Command.EmergencyStop);
         MakeCommandPad("Green pad - depart", new Vector3(5.8f, 1.62f, 2f), bottleMaterial,

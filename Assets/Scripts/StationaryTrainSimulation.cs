@@ -73,6 +73,9 @@ public class StationaryTrainSimulation : MonoBehaviour
     [Min(0f)] public float roughnessMultiplier = 1f;
     [Range(-1f, 1f)] public float bankDegreesPerTurnRate = 0.15f;
     public bool includeRotationalForces = true;
+    [Header("Reusable ride settings")]
+    public TrainRideProfile rideProfile;
+    public bool applyProfileOnStart = true;
     [Header("Gameplay events")]
     public UnityEvent onDeparted = new UnityEvent();
     public UnityEvent onStopped = new UnityEvent();
@@ -104,6 +107,7 @@ public class StationaryTrainSimulation : MonoBehaviour
         volume.isTrigger = true;
         Rigidbody carriage = Frame.GetComponentInParent<Rigidbody>();
         if (carriage != null) carriage.isKinematic = true;
+        if (applyProfileOnStart && rideProfile != null) rideProfile.ApplyTo(this);
         ResetJourney();
     }
     void OnEnable() { if (!active.Contains(this)) active.Add(this); }

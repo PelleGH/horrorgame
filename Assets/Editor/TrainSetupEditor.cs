@@ -128,8 +128,31 @@ public class StationaryTrainSimulationEditor : Editor
 {
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector();
+        serializedObject.Update();
+        TrainRideInspector.Group(serializedObject, "Train and affected objects", "trainFrame", "affectedBodyLayers",
+            "affectRigidbodies", "objectForceMultiplier", "maximumAcceleration");
+        TrainRideInspector.Group(serializedObject, "Reusable settings", "rideProfile", "applyProfileOnStart");
+        TrainRideInspector.DrawRide(serializedObject);
+        TrainRideInspector.Group(serializedObject, "Gameplay events", "onDeparted", "onStopped");
+        serializedObject.ApplyModifiedProperties();
         StationaryTrainSimulation simulation = (StationaryTrainSimulation)target;
+        if (simulation.rideProfile != null)
+        {
+            if (GUILayout.Button("Apply Assigned Ride Profile"))
+            {
+                Undo.RecordObject(simulation, "Apply ride profile");
+                simulation.rideProfile.ApplyTo(simulation);
+                if (Application.isPlaying) simulation.ResetJourney();
+                EditorUtility.SetDirty(simulation);
+            }
+            if (GUILayout.Button("Save Current Ride Into Assigned Profile"))
+            {
+                Undo.RecordObject(simulation.rideProfile, "Save ride profile");
+                simulation.rideProfile.CaptureFrom(simulation);
+                EditorUtility.SetDirty(simulation.rideProfile);
+                AssetDatabase.SaveAssets();
+            }
+        }
         EditorGUILayout.HelpBox("This train stays stationary. Edit the BoxCollider to cover the carriage interior. "
             + "Dynamic props with gravity inside it receive inertia automatically. Add Stationary Train Passenger "
             + "to your player. +Z of Train Frame is forward.", MessageType.Info);
@@ -161,6 +184,104 @@ public class StationaryTrainSimulationEditor : Editor
             if (GUILayout.Button("Stop")) simulation.StopTrain();
             if (GUILayout.Button("Emergency Brake")) simulation.EmergencyStop();
         }
+    }
+}
+
+public static class TrainRideInspector
+{
+    public static void Group(SerializedObject data, string title, params string[] fields)
+    {
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        string key = "TrainRideInspector." + data.targetObject.GetType().Name + "." + title;
+        bool open = EditorGUILayout.Foldout(SessionState.GetBool(key, true), title, true);
+        SessionState.SetBool(key, open);
+        if (open)
+            foreach (string field in fields)
+            {
+                SerializedProperty property = data.FindProperty(field);
+                if (property != null) EditorGUILayout.PropertyField(property, true);
+            }
+        EditorGUILayout.EndVertical();
+    }
+
+    public static void DrawRide(SerializedObject data)
+    {
+        EditorGUILayout.LabelField("Quick movement presets", EditorStyles.boldLabel);
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Gentle")) Preset(data, 0);
+        if (GUILayout.Button("Normal")) Preset(data, 1);
+        if (GUILayout.Button("Rough")) Preset(data, 2);
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.HelpBox("Presets adjust speed, braking, turns, hills and vibration, including timetable targets. "
+            + "Undo restores your previous values. Expand groups to fine-tune.", MessageType.None);
+        Group(data, "Journey mode and motion", "mode", "running", "emergencyBrake", "cruiseSpeed",
+            "acceleration", "braking", "emergencyBraking", "turnResponse", "gradeResponse");
+        var mode = (StationaryTrainSimulation.MotionMode)data.FindProperty("mode").enumValueIndex;
+        switch (mode)
+        {
+            case StationaryTrainSimulation.MotionMode.RandomJourney:
+                Group(data, "Random route and station stops", "randomSeed", "randomSpeedRange", "driveDurationRange",
+                    "stationDwellRange", "bendDurationRange", "maximumRandomTurn", "maximumRandomGrade");
+                break;
+            case StationaryTrainSimulation.MotionMode.Timetable:
+                Group(data, "Timed ride stages", "repeatTimetable", "timetable");
+                break;
+            case StationaryTrainSimulation.MotionMode.Manual:
+                Group(data, "Manual turns and hills", "manualTurnDegreesPerSecond", "manualUphillDegrees");
+                break;
+            case StationaryTrainSimulation.MotionMode.VirtualRoute:
+                Group(data, "Virtual waypoint path", "virtualRoute", "routeStartDistance");
+                break;
+        }
+        Group(data, "Bumps, vibration and banking", "bounceAmplitude", "bounceFrequency", "vibrationAmplitude",
+            "vibrationFrequency", "roughnessMultiplier", "bankDegreesPerTurnRate", "includeRotationalForces");
+    }
+
+    static void Set(SerializedObject data, string field, float value) => data.FindProperty(field).floatValue = value;
+
+    static void Preset(SerializedObject data, int level)
+    {
+        float speed = level == 0 ? 5f : level == 1 ? 8f : 10f;
+        float turn = level == 0 ? 3f : level == 1 ? 8f : 12f;
+        float grade = level == 0 ? 2f : level == 1 ? 4f : 7f;
+        Set(data, "cruiseSpeed", speed);
+        Set(data, "acceleration", level == 0 ? 0.8f : level == 1 ? 1.5f : 2.5f);
+        Set(data, "braking", level == 0 ? 1.2f : level == 1 ? 2f : 4f);
+        Set(data, "emergencyBraking", level == 0 ? 3f : level == 1 ? 6f : 8f);
+        data.FindProperty("randomSpeedRange").vector2Value = new Vector2(speed * 0.65f, speed);
+        Set(data, "maximumRandomTurn", turn);
+        Set(data, "maximumRandomGrade", grade);
+        SerializedProperty manualTurn = data.FindProperty("manualTurnDegreesPerSecond");
+        if (manualTurn.floatValue != 0f) manualTurn.floatValue = Mathf.Sign(manualTurn.floatValue) * turn;
+        SerializedProperty manualGrade = data.FindProperty("manualUphillDegrees");
+        if (manualGrade.floatValue != 0f) manualGrade.floatValue = Mathf.Sign(manualGrade.floatValue) * grade;
+        Set(data, "bounceAmplitude", level == 0 ? 0.01f : level == 1 ? 0.02f : 0.04f);
+        Set(data, "vibrationAmplitude", level == 0 ? 0.0003f : level == 1 ? 0.0006f : 0.0012f);
+        Set(data, "roughnessMultiplier", level == 0 ? 0.7f : level == 1 ? 1f : 1.5f);
+        SerializedProperty stages = data.FindProperty("timetable");
+        for (int i = 0; i < stages.arraySize; i++)
+        {
+            SerializedProperty stage = stages.GetArrayElementAtIndex(i);
+            SerializedProperty stageSpeed = stage.FindPropertyRelative("speed");
+            if (stageSpeed != null && stageSpeed.floatValue > 0f) stageSpeed.floatValue = speed;
+            SerializedProperty stageTurn = stage.FindPropertyRelative("turnDegreesPerSecond");
+            if (stageTurn != null && stageTurn.floatValue != 0f) stageTurn.floatValue = Mathf.Sign(stageTurn.floatValue) * turn;
+            SerializedProperty stageGrade = stage.FindPropertyRelative("uphillDegrees");
+            if (stageGrade != null && stageGrade.floatValue != 0f) stageGrade.floatValue = Mathf.Sign(stageGrade.floatValue) * grade;
+        }
+    }
+}
+
+[CustomEditor(typeof(TrainRideProfile))]
+public class TrainRideProfileEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        serializedObject.Update();
+        TrainRideInspector.DrawRide(serializedObject);
+        serializedObject.ApplyModifiedProperties();
+        EditorGUILayout.HelpBox("Assign this asset to a train simulation or the test scene bootstrap. "
+            + "Settings apply when Play starts. Scene references, volume, player settings and events stay on the train.", MessageType.Info);
     }
 }
 

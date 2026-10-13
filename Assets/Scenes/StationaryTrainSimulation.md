@@ -184,6 +184,27 @@ Use **Rebuild Route** after runtime edits; large changes can alter motion abrupt
 
 ## 6. Movement settings
 
+The ride Inspector uses collapsible groups and only shows the settings for your
+selected journey mode. **Gentle / Normal / Rough** provide quick movement presets.
+They change speed, braking, turns, hills and vibration, including existing timetable
+targets; stage durations and stop stages are preserved. Undo restores previous values.
+
+To keep and reuse your settings:
+
+1. Choose **Assets > Create > Train > Ride Profile**.
+2. Select the asset and edit its grouped settings or apply a preset.
+3. Assign it to **Ride Profile** on your simulation. Enable **Apply Profile On Start**.
+4. For the demo, assign it to the bootstrap object's **Ride Profile** before Play.
+5. To keep a ride tuned during Play, click **Save Current Ride Into Assigned Profile**
+   on the simulation. This writes the asset, so its settings persist after Play.
+
+**Apply Assigned Ride Profile** reloads the asset's settings; during Play it also
+restarts the journey. Profile assets store ride parameters and an independent copy
+of timetable stages. Train/route scene references, box geometry, object force
+filters/multipliers, player settings, running/brake flags and events remain on the
+scene components. Profile edits are applied at startup or using the Apply button,
+not automatically every frame. Without a profile, component settings are used.
+
 | Simulation setting | Default | Effect |
 | --- | --- | --- |
 | Acceleration | 1.5 | Increasing speed, in m/s² |
