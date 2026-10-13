@@ -1,12 +1,19 @@
-using UnityEngine;
 
-public class Door : MonoBehaviour
+using UnityEngine;
+using System.Collections;
+
+public class Door : MonoBehaviour, IInteractable
 {
-    public Transform doorRoot; // the hinge object
+    [Header("References")]
+    public Transform doorRoot;
     public Renderer handleRenderer;
 
+    [Header("Door Settings")]
     public float openAngle = 90f;
     public float speed = 3f;
+
+    [Header("Interaction")]
+    public string promptText = "open / close";
 
     private bool isOpen = false;
     private bool isAnimating = false;
@@ -16,21 +23,51 @@ public class Door : MonoBehaviour
 
     private Material mat;
 
-    void Start()
-    {
-        closedRot = doorRoot.localRotation;
-        openRot = Quaternion.Euler(0, openAngle, 0) * closedRot;
+    public bool CanInteract =>
+        isActiveAndEnabled && doorRoot != null;
 
-        mat = handleRenderer.material;
-        mat.DisableKeyword("_EMISSION");
+    public string InteractionPrompt => promptText;
+
+    private void Start()
+    {
+        if (doorRoot == null)
+        {
+            Debug.LogWarning(
+                "Door is missing doorRoot: " + name
+            );
+            return;
+        }
+
+        closedRot = doorRoot.localRotation;
+        openRot = Quaternion.Euler(0, openAngle, 0)
+            * closedRot;
+
+        if (handleRenderer != null)
+        {
+            mat = handleRenderer.material;
+            mat.DisableKeyword("_EMISSION");
+        }
+    }
+
+    // Called by PlayerInteract.
+    public void Interact(PlayerInteract player)
+    {
+        if (CanInteract)
+            ToggleDoor();
     }
 
     public void SetHighlight(bool state)
     {
+        if (mat == null)
+            return;
+
         if (state)
         {
             mat.EnableKeyword("_EMISSION");
-            mat.SetColor("_EmissionColor", Color.green * 2f);
+            mat.SetColor(
+                "_EmissionColor",
+                Color.green * 2f
+            );
         }
         else
         {
@@ -40,28 +77,39 @@ public class Door : MonoBehaviour
 
     public void ToggleDoor()
     {
-        if (!isAnimating)
+        if (!isAnimating && doorRoot != null)
             StartCoroutine(RotateDoor());
     }
 
-    System.Collections.IEnumerator RotateDoor()
+    private IEnumerator RotateDoor()
     {
         isAnimating = true;
 
-        Quaternion target = isOpen ? closedRot : openRot;
+        Quaternion target = isOpen
+            ? closedRot
+            : openRot;
 
-        while (Quaternion.Angle(doorRoot.localRotation, target) > 0.1f)
+        while (Quaternion.Angle(
+            doorRoot.localRotation,
+            target) > 0.1f)
         {
             doorRoot.localRotation = Quaternion.Slerp(
                 doorRoot.localRotation,
                 target,
                 Time.deltaTime * speed
             );
+
             yield return null;
         }
 
         doorRoot.localRotation = target;
+
         isOpen = !isOpen;
         isAnimating = false;
+    }
+
+    private void OnDisable()
+    {
+        SetHighlight(false);
     }
 }

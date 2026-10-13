@@ -1,67 +1,49 @@
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-/// <summary>
-/// Put on an NPC or object to give it dialogue. Started by pressing the interact key while
-/// looking at it (PlayerInteract; its collider must be on the interact layer), and/or by
-/// walking into its trigger collider.
-/// </summary>
-public class DialogueTrigger : MonoBehaviour
+public class DialogueTrigger : MonoBehaviour, IInteractable
 {
     [Serializable]
     public class LineEvent
     {
-        [Tooltip("Index of the line in the dialogue this trigger started (0 = first line).")]
+        [Tooltip("0 = first line.")]
         public int line;
         public UnityEvent onLineStarted;
     }
 
     [Header("Dialogue")]
     public DialogueAsset dialogue;
-
-    [Tooltip("Played instead of 'Dialogue' once 'Dialogue' has been played before. Empty = replay 'Dialogue'.")]
     public DialogueAsset repeatDialogue;
 
     [Header("Behaviour")]
-    [Tooltip("Can only be started once per scene load. Overrides 'Repeat Dialogue'.")]
     public bool playOnce = false;
-
-    [Tooltip("Start automatically when the player enters this object's trigger collider.")]
     public bool triggerOnEnter = false;
 
     [Header("Presentation")]
-    [Tooltip("Shown next to the interact key while looking at this, e.g. \"[E] talk\".")]
     public string promptText = "talk";
-
-    [Tooltip("Turn the player's view towards the speaker during the dialogue.")]
     public bool focusCamera = true;
-
-    [Tooltip("What the camera looks at. Empty = centre of this object's collider.")]
     public Transform focusPoint;
 
-    [Tooltip("How strong the glow is. It is tinted from the object's own colour/texture.")]
-    [Range(0f, 1f)] public float highlightIntensity = 0.3f;
+    [Range(0f, 1f)]
+    public float highlightIntensity = 0.3f;
 
-    [Tooltip("Coloured materials get this much more saturated in the glow. Greys get lighter instead.")]
-    [Range(0f, 1f)] public float highlightSaturationBoost = 0.25f;
+    [Range(0f, 1f)]
+    public float highlightSaturationBoost = 0.25f;
 
-    [Tooltip("Renderers that glow when looked at. Empty = all renderers on this object and its children.")]
     public Renderer[] highlightRenderers;
 
     [Header("Events")]
     public UnityEvent onStarted;
     public UnityEvent onFinished;
-
-    [Tooltip("Fires for every line shown, with the line's index.")]
     public UnityEvent<int> onLineStarted;
-
-    [Tooltip("Fires for specific lines of the dialogue this trigger started.")]
     public LineEvent[] lineEvents;
 
     private bool played;
     private DialogueAsset activeAsset;
+
     private class HighlightMaterial
     {
         public Material material;
@@ -73,17 +55,37 @@ public class DialogueTrigger : MonoBehaviour
     private List<HighlightMaterial> highlightMaterials;
     private bool highlighted;
 
-    /// <summary>The dialogue that would play right now.</summary>
     public DialogueAsset CurrentDialogue =>
-        repeatDialogue != null && DialogueState.HasPlayed(dialogue) ? repeatDialogue : dialogue;
+        repeatDialogue != null &&
+        DialogueState.HasPlayed(dialogue)
+            ? repeatDialogue
+            : dialogue;
 
     public bool CanInteract =>
-        !(playOnce && played) && CurrentDialogue != null && CurrentDialogue.IsPlayable;
+        isActiveAndEnabled &&
+        !(playOnce && played) &&
+        CurrentDialogue != null &&
+        CurrentDialogue.IsPlayable;
 
-    /// <summary>Starts the dialogue. Returns false if it could not start.</summary>
+    public string InteractionPrompt => promptText;
+
+    // Called by the generic player interactor.
+    void IInteractable.Interact(PlayerInteract player)
+    {
+        Interact();
+    }
+
+    // Also supports automatic trigger interactions.
     public bool Interact()
     {
-        if (!CanInteract)
+        if (!CanInteract || DialogueManager.IsBusy)
+            return false;
+
+        // Don't interrupt an ongoing item inspection.
+        SimpleFPSControllerNewInput controller =
+            FindFirstObjectByType<SimpleFPSControllerNewInput>();
+
+        if (controller != null && controller.isInspecting)
             return false;
 
         DialogueAsset asset = CurrentDialogue;
@@ -92,7 +94,8 @@ public class DialogueTrigger : MonoBehaviour
             asset,
             focusCamera ? GetFocusPosition : (Func<Vector3>)null,
             HandleFinished,
-            HandleLineStarted);
+            HandleLineStarted
+        );
 
         if (started)
         {
@@ -126,9 +129,12 @@ public class DialogueTrigger : MonoBehaviour
 
             if (on)
             {
-                // Recomputed each time so inspector tweaks apply without a rebuild.
                 material.EnableKeyword("_EMISSION");
-                material.SetColor("_EmissionColor", entry.glowColor * highlightIntensity);
+
+                material.SetColor(
+                    "_EmissionColor",
+                    entry.glowColor * highlightIntensity
+                );
 
                 if (entry.glowMap != null)
                     material.SetTexture("_EmissionMap", entry.glowMap);
@@ -139,13 +145,16 @@ public class DialogueTrigger : MonoBehaviour
                 material.SetColor("_EmissionColor", Color.black);
 
                 if (entry.glowMap != null)
-                    material.SetTexture("_EmissionMap", entry.originalEmissionMap);
+                {
+                    material.SetTexture(
+                        "_EmissionMap",
+                        entry.originalEmissionMap
+                    );
+                }
             }
         }
     }
 
-    // Glow tint derived from the material's own colour: coloured materials get a more saturated
-    // version of their hue, greys get a lighter grey.
     private Color ComputeGlowColor(Material material)
     {
         Color baseColor = Color.white;
@@ -155,11 +164,15 @@ public class DialogueTrigger : MonoBehaviour
         else if (material.HasProperty("_Color"))
             baseColor = material.GetColor("_Color");
 
-        Color.RGBToHSV(baseColor, out float h, out float s, out float v);
+        Color.RGBToHSV(
+            baseColor,
+            out float h,
+            out float s,
+            out float v
+        );
 
         if (s < 0.15f)
         {
-            // Grey/white: no hue to push, so make it lighter.
             s = 0f;
             v = Mathf.Lerp(v, 1f, 0.6f);
         }
@@ -198,14 +211,19 @@ public class DialogueTrigger : MonoBehaviour
             return focusPoint.position;
 
         Collider col = GetComponentInChildren<Collider>();
-        return col != null ? col.bounds.center : transform.position;
+
+        return col != null
+            ? col.bounds.center
+            : transform.position;
     }
 
     private void CacheHighlightMaterials()
     {
-        Renderer[] renderers = highlightRenderers != null && highlightRenderers.Length > 0
-            ? highlightRenderers
-            : GetComponentsInChildren<Renderer>();
+        Renderer[] renderers =
+            highlightRenderers != null &&
+            highlightRenderers.Length > 0
+                ? highlightRenderers
+                : GetComponentsInChildren<Renderer>();
 
         highlightMaterials = new List<HighlightMaterial>();
 
@@ -216,7 +234,8 @@ public class DialogueTrigger : MonoBehaviour
 
             foreach (Material material in rend.materials)
             {
-                if (material == null || !material.HasProperty("_EmissionColor"))
+                if (material == null ||
+                    !material.HasProperty("_EmissionColor"))
                     continue;
 
                 HighlightMaterial entry = new HighlightMaterial
@@ -225,7 +244,6 @@ public class DialogueTrigger : MonoBehaviour
                     glowColor = ComputeGlowColor(material)
                 };
 
-                // Textured materials glow in their own texture's colours.
                 if (material.HasProperty("_EmissionMap"))
                 {
                     Texture baseTexture = null;
@@ -237,7 +255,9 @@ public class DialogueTrigger : MonoBehaviour
 
                     if (baseTexture != null)
                     {
-                        entry.originalEmissionMap = material.GetTexture("_EmissionMap");
+                        entry.originalEmissionMap =
+                            material.GetTexture("_EmissionMap");
+
                         entry.glowMap = baseTexture;
                     }
                 }
@@ -264,7 +284,8 @@ public class DialogueTrigger : MonoBehaviour
         if (!triggerOnEnter)
             return;
 
-        if (other.GetComponentInParent<SimpleFPSControllerNewInput>() == null)
+        if (other.GetComponentInParent<
+            SimpleFPSControllerNewInput>() == null)
             return;
 
         Interact();

@@ -1,96 +1,155 @@
+
 using UnityEngine;
-
-
 
 public class PlayerInteract : MonoBehaviour
 {
+    [Header("Raycast")]
+    public Camera playerCamera;
     public float interactDistance = 3f;
-    public LayerMask interactLayer;
+    public LayerMask raycastMask = ~0;
 
-   public KeyCode inspectKey = KeyCode.E;
+    [Header("Input")]
+    public KeyCode inspectKey = KeyCode.E;
 
-    private Door currentDoor;
-    private DialogueTrigger currentDialogue;
+    [Header("Inspection")]
+    public ItemInspector itemInspector;
 
-    void Update()
+    private IInteractable currentTarget;
+    private string currentPrompt;
+
+    private void Awake()
     {
-        if (DialogueManager.IsBusy)
+        if (itemInspector == null)
+            itemInspector = GetComponent<ItemInspector>();
+    }
+
+    private void Update()
+    {
+        // Inspection mode has priority.
+        if (itemInspector != null && itemInspector.IsBusy)
         {
-            SetCurrentDialogue(null);
+            SetTarget(null);
+
+            if (itemInspector.IsInspecting &&
+                Input.GetKeyDown(inspectKey))
+            {
+                itemInspector.StopInspect();
+            }
+
             return;
         }
 
-        Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
-        RaycastHit hit;
-        DialogueTrigger lookedAtDialogue = null;
-
-        if (Physics.Raycast(ray, out hit, interactDistance, interactLayer))
+        // Dialogue owns input while a conversation is active.
+        if (DialogueManager.IsBusy)
         {
-            Door door = hit.collider.GetComponentInParent<Door>();
-
-            if (door != null)
-            {
-                SetCurrentDialogue(null);
-                currentDoor = door;
-                door.SetHighlight(true);
-
-                if (Input.GetKeyDown(inspectKey))
-                {
-                    door.ToggleDoor();
-                }
-
-                return;
-            }
-
-            DialogueTrigger dialogue = hit.collider.GetComponentInParent<DialogueTrigger>();
-
-            if (dialogue != null && dialogue.CanInteract)
-            {
-                lookedAtDialogue = dialogue;
-
-                if (Input.GetKeyDown(inspectKey))
-                {
-                    dialogue.Interact();
-
-                    if (DialogueManager.IsBusy)
-                        lookedAtDialogue = null;
-                }
-            }
+            SetTarget(null);
+            return;
         }
 
-        SetCurrentDialogue(lookedAtDialogue);
+        Camera cam = playerCamera != null
+            ? playerCamera
+            : Camera.main;
 
-        // If not looking anymore
-        if (currentDoor != null)
+        if (cam == null)
         {
-            currentDoor.SetHighlight(false);
-            currentDoor = null;
+            SetTarget(null);
+            return;
+        }
+
+        Ray ray = new Ray(
+            cam.transform.position,
+            cam.transform.forward
+        );
+
+        IInteractable target = null;
+
+        if (Physics.Raycast(
+            ray,
+            out RaycastHit hit,
+            interactDistance,
+            raycastMask,
+            QueryTriggerInteraction.UseGlobal))
+        {
+            target = hit.collider
+                .GetComponentInParent<IInteractable>();
+
+            if (target != null && !target.CanInteract)
+                target = null;
+        }
+
+        SetTarget(target);
+
+        if (currentTarget != null &&
+            Input.GetKeyDown(inspectKey))
+        {
+            currentTarget.Interact(this);
+
+            // Clear prompts when an exclusive action starts.
+            if (DialogueManager.IsBusy ||
+                (itemInspector != null && itemInspector.IsBusy) ||
+                !currentTarget.CanInteract)
+            {
+                SetTarget(null);
+            }
         }
     }
 
-    void SetCurrentDialogue(DialogueTrigger dialogue)
+    private void SetTarget(IInteractable target)
     {
-        if (dialogue == currentDialogue)
+        if (!ReferenceEquals(currentTarget, target))
+        {
+            if (currentTarget is UnityEngine.Object oldObject &&
+                oldObject != null)
+            {
+                currentTarget.SetHighlight(false);
+            }
+
+            if (currentPrompt != null)
+                DialogueManager.HidePrompt();
+
+            currentTarget = target;
+            currentPrompt = null;
+
+            if (currentTarget is UnityEngine.Object newObject &&
+                newObject != null)
+            {
+                currentTarget.SetHighlight(true);
+            }
+        }
+
+        if (currentTarget == null)
+        {
+            if (currentPrompt != null)
+                DialogueManager.HidePrompt();
+
+            currentPrompt = null;
+            return;
+        }
+
+        string prompt = currentTarget.InteractionPrompt;
+
+        string displayText = string.IsNullOrWhiteSpace(prompt)
+            ? null
+            : "[" + inspectKey + "] " + prompt;
+
+        if (displayText == currentPrompt)
             return;
 
-        if (currentDialogue != null)
-            currentDialogue.SetHighlight(false);
+        currentPrompt = displayText;
 
-        currentDialogue = dialogue;
-
-        if (dialogue != null)
-        {
-            dialogue.SetHighlight(true);
-            DialogueManager.Instance.ShowInteractPrompt("[" + inspectKey + "] " + dialogue.promptText);
-        }
-        else
+        if (displayText == null)
         {
             DialogueManager.HidePrompt();
         }
+        else
+        {
+            DialogueManager.Instance
+                .ShowInteractPrompt(displayText);
+        }
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
-        SetCurrentDialogue(null);
+        SetTarget(null);
     }
 }
