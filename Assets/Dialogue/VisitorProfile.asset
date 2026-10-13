@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a1c9e72b3d84f0e9c6a2d7b8e41f035, type: 3}
+  m_Name: VisitorProfile
+  m_EditorClassIdentifier: Assembly-CSharp::SpeakerProfile
+  displayName: Visitor
+  nameColor: {r: 0.5, g: 0.55, b: 0.5, a: 0.9}
+  textColor: {r: 0.72, g: 0.74, b: 0.7, a: 0.95}
+  speedMultiplier: 1.2
+  voice:
+    clips: []
+    volume: 0.45
+    muffle: 0.3
+    distortion: 0
+    basePitch: 1.1
+    scale: 0
+    pitchSpread: 0.8
+    jitterSemitones: 0.5
+    driftSemitones: 2
+    wordStressSemitones: 0.8
+    volumeJitter: 0.2
+    questionLift: 5
+    exclamationBoost: 3
+    exclamationVolume: 0.25
+    periodFall: -1
+    ellipsisDrop: -2
+    ellipsisVolume: 0.7
+    soundEveryNLetters: 3
+    voiceCapitals: 1
+    capitalAccent: 1

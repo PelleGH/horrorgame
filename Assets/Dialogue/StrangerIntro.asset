@@ -26,6 +26,8 @@ MonoBehaviour:
     next: {fileID: 11400000, guid: 91d0b5e3a7c24f68b4e1d9a03c5f7e26, type: 2}
   - text: Who are you?
     next: {fileID: 11400000, guid: e3a65f1b8d9c4207a1b4c8d2f6e09a73, type: 2}
+  - text: Say something.
+    next: {fileID: 11400000, guid: 3e9a5c71d2b84f06b8a14d7c6f20e395, type: 2}
   - text: Leave.
     next: {fileID: 0}
   next: {fileID: 0}
