@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a1c9e72b3d84f0e9c6a2d7b8e41f035, type: 3}
+  m_Name: StrangerProfile
+  m_EditorClassIdentifier: Assembly-CSharp::SpeakerProfile
+  displayName: Stranger
+  nameColor: {r: 0.52, g: 0.36, b: 0.34, a: 0.9}
+  textColor: {r: 0.7, g: 0.7, b: 0.66, a: 0.95}
+  speedMultiplier: 0.7
+  blipClip: {fileID: 0}
+  blipVolume: 0.4
+  blipPitchRange: {x: 0.9, y: 1.1}
