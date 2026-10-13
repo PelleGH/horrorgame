@@ -1,9 +1,13 @@
 using UnityEngine;
 
+
+
 public class PlayerInteract : MonoBehaviour
 {
     public float interactDistance = 3f;
     public LayerMask interactLayer;
+
+   public KeyCode inspectKey = KeyCode.E;
 
     private Door currentDoor;
 
@@ -22,7 +26,7 @@ public class PlayerInteract : MonoBehaviour
                 currentDoor = door;
                 door.SetHighlight(true);
 
-                if (Input.GetKeyDown(KeyCode.F))
+                if (Input.GetKeyDown(inspectKey))
                 {
                     door.ToggleDoor();
                 }
