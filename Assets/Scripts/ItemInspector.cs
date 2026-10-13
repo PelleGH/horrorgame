@@ -66,7 +66,7 @@ public class ItemInspector : MonoBehaviour
         switch (state)
         {
             case InspectState.Idle:
-                if (Input.GetKeyDown(inspectKey))
+                if (Input.GetKeyDown(inspectKey) && !DialogueManager.IsBusy)
                     TryStartInspect();
                 break;
 
