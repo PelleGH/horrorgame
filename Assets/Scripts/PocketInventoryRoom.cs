@@ -39,6 +39,7 @@ public class PocketInventoryRoom : MonoBehaviour
         BuildLining(liningMaterial);
         BuildBack(liningMaterial);
         BuildPocketHem();
+        BuildFabricDetails();
         GameObject lamp = new GameObject("Soft center pocket light");
         lamp.transform.SetParent(transform, false);
         lamp.transform.localPosition = new Vector3(0f, 0.18f, 0.25f);
@@ -89,7 +90,7 @@ public class PocketInventoryRoom : MonoBehaviour
             float angle = i * Mathf.PI * 2f / segments;
             for (int ring = 0; ring < 2; ring++)
                 vertices[ring * (segments + 1) + i] = new Vector3(Mathf.Cos(angle) * (ring == 0 ? 1.2f : 0.85f),
-                    Mathf.Sin(angle) * (ring == 0 ? 0.8f : 0.6f), ring == 0 ? -0.15f : 0.7f);
+                    Mathf.Sin(angle) * (ring == 0 ? 0.8f : 0.6f), ring == 0 ? -0.15f + Mathf.Sin(angle * 3f) * 0.035f : 0.7f);
             if (i == segments) continue;
             int a = i, b = i + 1, c = segments + 1 + i, d = c + 1;
             int t = i * 6;
@@ -131,18 +132,19 @@ public class PocketInventoryRoom : MonoBehaviour
 
     void BuildPocketHem()
     {
-        Material fabric = Material(new Color(0.12f, 0.15f, 0.18f));
+        Material fabric = Material(new Color(0.12f, 0.23f, 0.24f));
         if (fabric.HasProperty("_Smoothness")) fabric.SetFloat("_Smoothness", 0f);
         if (fabric.HasProperty("_Glossiness")) fabric.SetFloat("_Glossiness", 0f);
-        Material thread = Material(new Color(0.36f, 0.32f, 0.25f));
-        const int segments = 48;
+        Material thread = Material(new Color(0.72f, 0.53f, 0.28f));
+        const int segments = 40;
         for (int i = 0; i < segments; i++)
         {
             float angle = i * Mathf.PI * 2f / segments;
-            Vector3 point = new Vector3(Mathf.Cos(angle) * 1.2f, Mathf.Sin(angle) * 0.8f, -0.15f);
+            Vector3 point = new Vector3(Mathf.Cos(angle) * 1.2f, Mathf.Sin(angle) * 0.8f,
+                -0.15f + Mathf.Sin(angle * 3f) * 0.035f);
             float tangent = Mathf.Atan2(0.8f * Mathf.Cos(angle), -1.2f * Mathf.Sin(angle)) * Mathf.Rad2Deg;
             GameObject hem = Box("Folded fabric pocket edge", transform, point,
-                new Vector3(0.17f, 0.12f, 0.09f), fabric, false);
+                new Vector3(0.2f, 0.15f, 0.1f), fabric, false);
             hem.layer = pocketLayer;
             hem.transform.localRotation = Quaternion.Euler(0f, 0f, tangent);
             GameObject stitch = Box("Pocket seam stitch", transform, point + Vector3.back * 0.05f,
@@ -150,6 +152,32 @@ public class PocketInventoryRoom : MonoBehaviour
             stitch.layer = pocketLayer;
             stitch.transform.localRotation = hem.transform.localRotation;
         }
+    }
+
+    void BuildFabricDetails()
+    {
+        Material patch = Material(new Color(0.3f, 0.13f, 0.09f));
+        Material thread = Material(new Color(0.65f, 0.47f, 0.25f));
+        GameObject label = Box("Worn leather pocket label", transform, new Vector3(0.45f, 0.62f, 0.06f),
+            new Vector3(0.42f, 0.16f, 0.025f), patch, false);
+        label.layer = pocketLayer;
+        label.transform.localRotation = Quaternion.Euler(25f, 0f, -12f);
+        for (int i = 0; i < 5; i++)
+        {
+            GameObject stitch = Box("Label hand stitching", label.transform,
+                new Vector3(-0.36f + i * 0.18f, 0.3f, -0.6f), new Vector3(0.065f, 0.1f, 0.15f), thread, false);
+            stitch.layer = pocketLayer;
+        }
+        // Small contrasting seams run down the bag without covering the item slots.
+        for (int side = -1; side <= 1; side += 2)
+            for (int i = 0; i < 9; i++)
+            {
+                float depth = i / 8f;
+                GameObject stitch = Box("Interior side seam", transform,
+                    new Vector3(side * Mathf.Lerp(1.15f, 0.81f, depth), 0f, Mathf.Lerp(-0.08f, 0.66f, depth)),
+                    new Vector3(0.02f, 0.065f, 0.025f), thread, false);
+                stitch.layer = pocketLayer;
+            }
     }
 
     void CreateItem(Transform parent, int pocket, string name, Vector3 position, Color color, int shape)
@@ -187,6 +215,7 @@ public class PocketInventoryRoom : MonoBehaviour
         foreach (Collider collider in item.GetComponentsInChildren<Collider>()) collider.isTrigger = true;
         PocketInventoryItem data = item.AddComponent<PocketInventoryItem>();
         data.itemName = name; data.pocketIndex = pocket;
+        data.canThrow = shape == 2;
         data.InitializeStorage();
     }
 

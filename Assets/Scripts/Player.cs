@@ -63,6 +63,7 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     private Vector3 crouchCenter;
     public bool isInspecting;
     private bool isCrouching;
+    private PocketInventoryController pocketInventory;
 
     /// <summary>Vertical look angle in degrees (positive = looking down).</summary>
     public float Pitch
@@ -106,8 +107,15 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
     void Update()
     {
+        if (pocketInventory == null) pocketInventory = GetComponent<PocketInventoryController>();
+        if (pocketInventory != null && pocketInventory.IsCameraLocked) return;
         if (!isInspecting)
         {
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
             Look();
             Move();
         }
