@@ -13494,12 +13494,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemInspector
   playerCamera: {fileID: 89580421}
   playerController: {fileID: 1770634047}
-  inspectRange: 3
-  inspectKey: 101
   cancelKey: 27
-  inspectableMask:
-    serializedVersion: 2
-    m_Bits: 64
   transitionDuration: 0.28
   positionSmoothTime: 0.04
   rotateMouseButton: 0
@@ -13532,11 +13527,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 255d13018064be94cbab6fee6ccaf548, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
+  playerCamera: {fileID: 0}
   interactDistance: 3
-  interactLayer:
+  raycastMask:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 4294967295
   inspectKey: 101
+  itemInspector: {fileID: 0}
 --- !u!82 &1770634049
 AudioSource:
   m_ObjectHideFlags: 0
@@ -14336,12 +14333,22 @@ MonoBehaviour:
   repeatDialogue: {fileID: 11400000, guid: 6f2d8c4a1e7b4953bd0a5e9c3f18d6a4, type: 2}
   playOnce: 0
   triggerOnEnter: 0
+  promptText: talk
+  focusCamera: 1
+  focusPoint: {fileID: 0}
+  highlightIntensity: 0.3
+  highlightSaturationBoost: 0.25
+  highlightRenderers: []
   onStarted:
     m_PersistentCalls:
       m_Calls: []
   onFinished:
     m_PersistentCalls:
       m_Calls: []
+  onLineStarted:
+    m_PersistentCalls:
+      m_Calls: []
+  lineEvents: []
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

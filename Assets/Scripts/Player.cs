@@ -41,6 +41,12 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     [Header("Crouch Footsteps")]
     public float crouchStepInterval = 0.7f;
     public Vector2 crouchVolumeRange = new Vector2(0.4f, 0.6f);
+    [Header("Adaptive Audio (optional; old clips remain the fallback)")]
+    public HorrorAudio.SoundEmitter soundEmitter;
+    public HorrorAudio.GameSoundProfile footstepProfile;
+    public LayerMask footstepSurfaceMask = ~0;
+    [Range(0f, 2f)] public float sprintFootstepGain = 1.2f;
+    [Range(0f, 1f)] public float crouchFootstepGain = 0.45f;
     public Vector2 crouchPitchRange = new Vector2(0.85f, 0.95f);
 
     private CharacterController controller;
@@ -95,6 +101,7 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
         if (footstepSource == null)
             footstepSource = GetComponent<AudioSource>();
+        if (soundEmitter == null) soundEmitter = GetComponent<HorrorAudio.SoundEmitter>();
     }
 
     void Update()
@@ -247,8 +254,7 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
     void HandleFootsteps(bool grounded, bool isMoving, bool sprinting, bool crouching)
     {
-        if (footstepSource == null || footstepClips == null || footstepClips.Length == 0)
-            return;
+        if (soundEmitter == null && (footstepSource == null || footstepClips == null || footstepClips.Length == 0)) return;
 
         if (!grounded || !isMoving)
         {
@@ -274,7 +280,7 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
         if (!wasMovingLastFrame)
         {
-            PlayRandomFootstep(crouching);
+            PlayRandomFootstep(crouching, sprinting);
             stepTimer = currentInterval;
         }
         else
@@ -290,7 +296,7 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
             if (stepTimer <= 0f)
             {
-                PlayRandomFootstep(crouching);
+                PlayRandomFootstep(crouching, sprinting);
                 stepTimer = currentInterval;
             }
         }
@@ -299,9 +305,29 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
         wasSprintingLastFrame = sprinting;
     }
 
-    void PlayRandomFootstep(bool crouching)
+    void PlayRandomFootstep(bool crouching, bool sprinting)
     {
-        if (footstepClips.Length == 0)
+        HorrorAudio.GameSoundProfile profile = footstepProfile;
+        bool surfaceOverride = false;
+        Vector3 origin = new Vector3(transform.position.x, controller.bounds.min.y + 0.15f, transform.position.z);
+        if (soundEmitter != null && Physics.Raycast(origin, Vector3.down, out RaycastHit surfaceHit, 0.5f,
+            footstepSurfaceMask & ~(1 << gameObject.layer), QueryTriggerInteraction.Ignore))
+        {
+            var surface = surfaceHit.collider.GetComponentInParent<HorrorAudio.SoundSurface>();
+            if (surface != null && surface.footsteps != null) { profile = surface.footsteps; surfaceOverride = true; }
+        }
+        float gain = crouching ? crouchFootstepGain : sprinting ? sprintFootstepGain : 1f;
+        if (soundEmitter != null && !surfaceOverride && soundEmitter.HasDirectSound)
+        {
+            soundEmitter.PlayDefaultSound(gain, forceOneShot: true);
+            return;
+        }
+        if (soundEmitter != null && profile != null)
+        {
+            soundEmitter.Play(profile, gain);
+            return;
+        }
+        if (footstepSource == null || footstepClips == null || footstepClips.Length == 0)
             return;
 
         int clipIndex = 0;

@@ -10,6 +10,8 @@ using UnityEngine;
 /// </summary>
 public class DialogueVoice : MonoBehaviour
 {
+    [Tooltip("Optional shared mixer routing. Existing voice synthesis and timing are preserved.")]
+    public UnityEngine.Audio.AudioMixerGroup outputMixer;
     private const int PoolSize = 4;
     private const int SampleRate = 22050;
 
@@ -55,6 +57,7 @@ public class DialogueVoice : MonoBehaviour
             source.playOnAwake = false;
             source.loop = false;
             source.spatialBlend = 0f;
+            source.outputAudioMixerGroup = outputMixer;
             pool[i] = source;
 
             // Filters run in component order: distortion first, then the low-pass tames its harsh

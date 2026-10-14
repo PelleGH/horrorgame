@@ -11,6 +11,13 @@ public class Door : MonoBehaviour, IInteractable
     [Header("Door Settings")]
     public float openAngle = 90f;
     public float speed = 3f;
+    [Header("Adaptive Audio (optional)")]
+    public HorrorAudio.SoundEmitter soundEmitter;
+    public HorrorAudio.GameSoundProfile openSound;
+    public HorrorAudio.GameSoundProfile closeSound;
+    public HorrorAudio.GameSoundProfile latchSound;
+    [Tooltip("Optional direct files; use the emitter's object settings for their effects.")]
+    public AudioClip openClip, closeClip, latchClip;
 
     [Header("Interaction")]
     public string promptText = "open / close";
@@ -30,6 +37,7 @@ public class Door : MonoBehaviour, IInteractable
 
     private void Start()
     {
+        if (soundEmitter == null) soundEmitter = GetComponent<HorrorAudio.SoundEmitter>();
         if (doorRoot == null)
         {
             Debug.LogWarning(
@@ -84,6 +92,13 @@ public class Door : MonoBehaviour, IInteractable
     private IEnumerator RotateDoor()
     {
         isAnimating = true;
+        if (soundEmitter != null)
+        {
+            AudioClip clip = isOpen ? closeClip : openClip;
+            if (clip != null) soundEmitter.PlayClip(clip);
+            else if (soundEmitter.HasDirectSound) soundEmitter.PlayDefaultSound(forceOneShot: true);
+            else soundEmitter.Play(isOpen ? closeSound : openSound);
+        }
 
         Quaternion target = isOpen
             ? closedRot
@@ -106,6 +121,11 @@ public class Door : MonoBehaviour, IInteractable
 
         isOpen = !isOpen;
         isAnimating = false;
+        if (soundEmitter != null)
+        {
+            if (latchClip != null) soundEmitter.PlayClip(latchClip);
+            else soundEmitter.Play(latchSound);
+        }
     }
 
     private void OnDisable()
