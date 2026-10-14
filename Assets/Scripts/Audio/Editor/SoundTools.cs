@@ -63,17 +63,93 @@ namespace HorrorAudio.Editor
     [CustomEditor(typeof(SoundEmitter))]
     public class SoundEmitterEditor : UnityEditor.Editor
     {
+        bool layers, effects, space, train, advanced;
+        SoundStarter starter;
+        void Field(string name, string label = null)
+        {
+            SerializedProperty property = serializedObject.FindProperty(name);
+            if (property != null) EditorGUILayout.PropertyField(property, label == null ? null : new GUIContent(label), true);
+        }
         public override void OnInspectorGUI()
         {
             SoundEmitter emitter = (SoundEmitter)target;
-            EditorGUILayout.HelpBox("Drag your AudioClip into Audio Clip. Sound Settings affect this object's file; Default Profile remains the reusable fallback. Add Extra Layers for texture.", MessageType.Info);
-            DrawDefaultInspector();
-            if (emitter.HasDirectSound && GUILayout.Button("Save Object Sound As Reusable Profile")) SaveProfile(emitter);
-            using (new EditorGUI.DisabledScope(!Application.isPlaying))
+            serializedObject.Update();
+            using (new EditorGUI.DisabledScope(true)) Field("m_Script");
+            EditorGUILayout.LabelField("Audio & Playback", EditorStyles.boldLabel);
+            Field("audioClip", "Your Audio Clip"); Field("defaultProfile", "Reusable Profile (fallback)");
+            Field("playOnEnable"); Field("volume", "Object Volume"); Field("pitch", "Object Pitch");
+            if (emitter.HasDirectSound)
+            { Field("soundSettings.volume", "Clip Gain"); Field("soundSettings.loop"); Field("soundSettings.pitchVariation"); }
+            layers = EditorGUILayout.Foldout(layers, "Variations & Layers", true);
+            if (layers) { Field("clipVariations"); Field("extraLayers"); }
+            effects = EditorGUILayout.Foldout(effects, "Tone & Effects", true);
+            if (effects && emitter.HasDirectSound)
+                foreach (string name in new[] {"bassDb", "trebleDb", "distortion", "lowPass", "highPass", "reverb", "reverbLevel", "echoWet", "echoDelay", "echoDecay"}) Field("soundSettings." + name);
+            else if (effects) EditorGUILayout.HelpBox("A reusable profile owns its tone and effects. Select that profile to edit them, or assign your own Audio Clip here.", MessageType.Info);
+            space = EditorGUILayout.Foldout(space, "3D Sound & Environment", true);
+            if (space)
             {
-                if (GUILayout.Button("Play Default Profile")) ((SoundEmitter)target).PlayDefault();
-                if (GUILayout.Button("Stop Sounds")) ((SoundEmitter)target).StopAll();
+                if (emitter.HasDirectSound)
+                    foreach (string name in new[] {"spatialBlend", "minDistance", "maxDistance", "doppler", "output"}) Field("soundSettings." + name);
+                Field("useEnvironment"); Field("occlusion");
+                if (emitter.occlusion) { Field("occlusionMask"); Field("occludedVolume"); Field("occludedLowPass"); }
             }
+            train = EditorGUILayout.Foldout(train, "Train Adaptation", true);
+            if (train)
+            {
+                Field("respondToTrainMotion");
+                if (emitter.respondToTrainMotion) { Field("rideVolume"); Field("ridePitch"); }
+                Field("useSimulatedDoppler"); if (emitter.useSimulatedDoppler) Field("relativeSpeed");
+            }
+            advanced = EditorGUILayout.Foldout(advanced, "Advanced", true);
+            if (advanced) { Field("maxVoices"); Field("effectSmoothing"); }
+            serializedObject.ApplyModifiedProperties();
+            if (emitter.HasDirectSound)
+            {
+                starter = (SoundStarter)EditorGUILayout.EnumPopup("Starting Settings", starter);
+                using (new EditorGUI.DisabledScope(starter == SoundStarter.KeepCurrent))
+                    if (GUILayout.Button("Apply Starting Settings"))
+                    {
+                        Undo.RecordObject(emitter, "Apply sound settings");
+                        AddSoundWindow.ApplyStarter(emitter, starter); AddSoundWindow.Save(emitter);
+                    }
+            }
+            if (emitter.HasDirectSound && GUILayout.Button("Save Object Sound As Reusable Profile")) SaveProfile(emitter);
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button(Application.isPlaying ? "Play Sound" : "Preview 2D"))
+            {
+                if (Application.isPlaying) emitter.PlayDefault(); else SoundPreview.Play(emitter);
+            }
+            if (GUILayout.Button("Stop")) { if (Application.isPlaying) emitter.StopAll(); else SoundPreview.Stop(); }
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.HelpBox(Application.isPlaying ? emitter.LastPlaybackStatus + " Active voices: " + emitter.ActiveVoiceCount : SoundPreview.Status, MessageType.Info);
+            DrawDiagnostics(emitter);
+        }
+        static void DrawDiagnostics(SoundEmitter emitter)
+        {
+            if (!emitter.HasDirectSound && emitter.defaultProfile == null)
+                EditorGUILayout.HelpBox("No default sound assigned. An external door/footstep/impact profile can still trigger this emitter.", MessageType.Info);
+            if (!emitter.playOnEnable && emitter.GetComponent<Door>() == null && emitter.GetComponent<SimpleFPSControllerNewInput>() == null && emitter.GetComponent<SoundImpact>() == null)
+                EditorGUILayout.HelpBox("Manual trigger: call PlayDefault from a UnityEvent or animation event. Use Add Sound to connect another behaviour.", MessageType.Info);
+            var impact = emitter.GetComponent<SoundImpact>();
+            if (impact != null && (emitter.GetComponent<Rigidbody>() == null
+                || !System.Array.Exists(emitter.GetComponentsInChildren<Collider>(), collider => collider.enabled && !collider.isTrigger)))
+                EditorGUILayout.HelpBox("Collision audio needs a Rigidbody and solid collider on this physics object.", MessageType.Warning);
+            if (emitter.GetComponent<Door>() is Door door && door.doorRoot == null)
+                EditorGUILayout.HelpBox("Assign Door Root on the Door component.", MessageType.Warning);
+            if (Application.isPlaying && !System.Array.Exists(Object.FindObjectsByType<AudioListener>(FindObjectsSortMode.None), listener => listener.isActiveAndEnabled))
+                EditorGUILayout.HelpBox("No enabled AudioListener found in the scene.", MessageType.Warning);
+            if (emitter.HasDirectSound && emitter.audioClip != null && emitter.soundSettings.spatialBlend > 0f && emitter.audioClip.channels > 1)
+                EditorGUILayout.HelpBox("Stereo clip: consider a mono import for a tightly positioned 3D source.", MessageType.Info);
+        }
+        void OnSceneGUI()
+        {
+            var emitter = (SoundEmitter)target;
+            float distance = emitter.HasDirectSound ? emitter.soundSettings.maxDistance : emitter.defaultProfile != null ? emitter.defaultProfile.maxDistance : 0f;
+            Handles.color = new Color(0.2f, 0.8f, 1f, 0.4f);
+            Handles.DrawWireDisc(emitter.transform.position, Vector3.up, distance);
+            if (Application.isPlaying && SoundEngine.Instance != null && SoundEngine.Instance.listener != null && emitter.occlusion)
+                Handles.DrawDottedLine(emitter.transform.position, SoundEngine.Instance.listener.transform.position, 5f);
         }
         static void SaveProfile(SoundEmitter emitter)
         {

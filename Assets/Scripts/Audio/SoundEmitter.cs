@@ -40,6 +40,7 @@ namespace HorrorAudio
                 return false;
             }
         }
+        public string LastPlaybackStatus { get; private set; } = "No playback requested.";
         public int ActiveVoiceCount
         {
             get { int count = 0; foreach (Voice voice in voices) if (voice.Busy) count++; return count; }
@@ -113,21 +114,29 @@ namespace HorrorAudio
             profile.layers = layers.ToArray();
             return Play(profile, gain, pitchMultiplier);
         }
-        public void StopAll() { foreach (Voice voice in voices) if (voice.source != null) voice.source.Stop(); }
+        public void StopAll()
+        {
+            foreach (Voice voice in voices) if (voice.source != null) voice.source.Stop();
+            LastPlaybackStatus = "Stopped.";
+        }
         public void SetIntensity(float value) { volume = Mathf.Clamp(value, 0f, 2f); }
         public void SetSimulatedRelativeSpeed(float metresPerSecond) { relativeSpeed = metresPerSecond; useSimulatedDoppler = true; }
 
         public bool Play(GameSoundProfile profile, float gain = 1f, float pitchMultiplier = 1f)
         {
-            if (!isActiveAndEnabled || profile == null || profile.layers == null) return false;
+            if (!isActiveAndEnabled) { LastPlaybackStatus = "Emitter is disabled."; return false; }
+            if (profile == null || profile.layers == null) { LastPlaybackStatus = "Assign an Audio Clip or Sound Profile."; return false; }
             if (profile.loop)
-                foreach (Voice voice in voices) if (voice.Busy && voice.profile == profile) return true;
+                foreach (Voice voice in voices)
+                    if (voice.Busy && voice.profile == profile) { LastPlaybackStatus = "This loop is already playing."; return true; }
             int required = 0;
             foreach (SoundLayer layer in profile.layers)
                 if (layer != null && layer.HasSound) required++;
-            if (required == 0 || required > maxVoices || !SoundEngine.Ensure().HasVoiceBudget(required)) return false;
+            if (required == 0) { LastPlaybackStatus = "No playable clips or generators in this sound."; return false; }
+            if (required > maxVoices || !SoundEngine.Ensure().HasVoiceBudget(required))
+            { LastPlaybackStatus = required > maxVoices ? "Too many layers for this emitter's Max Voices." : "Global voice budget is full."; return false; }
             int free = maxVoices - ActiveVoiceCount;
-            if (free < required) return false;
+            if (free < required) { LastPlaybackStatus = "This emitter's voices are busy."; return false; }
             bool played = false;
             foreach (SoundLayer layer in profile.layers)
             {
@@ -152,6 +161,7 @@ namespace HorrorAudio
                 source.Play();
                 played = true;
             }
+            LastPlaybackStatus = played ? "Playing " + required + " layer(s)." : "No playable audio.";
             return played;
         }
         Voice FreeVoice()

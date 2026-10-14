@@ -21,6 +21,48 @@ procedural examples, not finished recordings or realistic Foley.
 
 ## Add audio to your game
 
+### Add Sound workflow
+
+Select an object and open **Tools > Horror Audio > Add Sound...**, or right-click
+the object in the Hierarchy and choose **Horror Audio > Add Sound...**.
+
+Assign a sound file, choose **Manual Event**, **Ambience**, **Footsteps**, **Door**
+or **Collision**, then click **Add / Configure Sound**. The tool connects the
+existing player/door or adds the collision adapter. Ambience starts on enable and
+loops. Manual Event exposes PlayDefault for your own UnityEvents/animation events.
+The tool does not add physics or a door gameplay script; it explains missing
+requirements before changing the object. Open prefab assets in Prefab Mode first.
+
+**Keep Current** preserves existing sound settings. Other starting settings are
+**Neutral**, **Metal Impact**, **Soft Wind** and **Small Train Car**. These are
+artist starting points, not measured material presets. Applying one replaces
+Object Sound Settings while preserving mixer routing. The chosen trigger decides
+whether playback loops. Setup supports one-step Undo and preserves existing
+gameplay components and their other events.
+
+The Inspector opens with audio and basic playback controls. Variations & Layers,
+Tone & Effects, 3D Sound & Environment, Train Adaptation and Advanced are separate
+foldouts. Diagnostics explain missing files, manual triggers, missing collision
+physics, an unassigned door root, missing listeners during Play and rejected
+playback due to voice limits. A selected emitter shows its maximum-distance disc
+in the Scene view, plus a listener line when testing occlusion in Play.
+
+### Preview while building
+
+**Preview 2D** works without entering Play Mode and does not spawn an emitter,
+listener or manager into your scene. It mixes clip layers, pitch, volume, bass,
+treble, frequency filters and approximate distortion/echo/reverb into a temporary
+mono preview of up to ten seconds. Stop releases it; preview also stops on Play
+Mode transitions, script reload or editor exit. No source asset is edited.
+
+This is an authoring audition, not the runtime acoustics: native Unity reverb and
+distortion can differ, and room effects, occlusion, 3D position, Doppler and mixer
+routing need Play Mode. Compressed/streaming or very large clips may require
+Decompress On Load or a Play Mode audition. Preview uses Unity's internal editor
+audio API and reports when it is unavailable on another Unity version.
+
+In Play Mode, the same Inspector buttons play/stop the actual runtime emitter.
+
 ### Direct audio files: no profile asset required
 
 1. Import your sound file into Assets (for example WAV or OGG).
