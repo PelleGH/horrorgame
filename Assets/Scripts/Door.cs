@@ -11,6 +11,14 @@ public class Door : MonoBehaviour, IInteractable
     [Header("Door Settings")]
     public float openAngle = 90f;
     public float speed = 3f;
+    [Header("Door events")]
+    public UnityEngine.Events.UnityEvent onOpening = new UnityEngine.Events.UnityEvent();
+    public UnityEngine.Events.UnityEvent onClosing = new UnityEngine.Events.UnityEvent();
+    public UnityEngine.Events.UnityEvent onOpened = new UnityEngine.Events.UnityEvent();
+    public UnityEngine.Events.UnityEvent onClosed = new UnityEngine.Events.UnityEvent();
+    public UnityEngine.Events.UnityEvent onMotionStopped = new UnityEngine.Events.UnityEvent();
+    public bool IsOpen => isOpen;
+    public bool IsAnimating => isAnimating;
 
     [Header("Interaction")]
     public string promptText = "open / close";
@@ -77,13 +85,14 @@ public class Door : MonoBehaviour, IInteractable
 
     public void ToggleDoor()
     {
-        if (!isAnimating && doorRoot != null)
+        if (isActiveAndEnabled && !isAnimating && doorRoot != null && speed > 0f)
             StartCoroutine(RotateDoor());
     }
 
     private IEnumerator RotateDoor()
     {
         isAnimating = true;
+        if (isOpen) onClosing.Invoke(); else onOpening.Invoke();
 
         Quaternion target = isOpen
             ? closedRot
@@ -106,10 +115,14 @@ public class Door : MonoBehaviour, IInteractable
 
         isOpen = !isOpen;
         isAnimating = false;
+        if (isOpen) onOpened.Invoke(); else onClosed.Invoke();
     }
 
     private void OnDisable()
     {
+        StopAllCoroutines();
+        isAnimating = false;
+        onMotionStopped.Invoke();
         SetHighlight(false);
     }
 }

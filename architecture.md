@@ -83,6 +83,11 @@ No additional scripts are needed for ordinary inspectable objects.
 
 The door automatically supports E interaction and highlighting.
 
+For sound, use **Tools > Horror Audio > Add Sound...**, select **Door**, and
+configure Opening, Closing and Latched on `DoorAudio`. `Door` owns motion and
+events; `DoorAudio` owns its audio responses. The latch follows the actual closed
+position. See [Audio documentation](audiodocumentation.md#door-audio-sequences-and-triggers).
+
 ## 4. Dialogue System
 
 **Scripts:** `DialogueTrigger.cs`, `DialogueManager.cs`, `DialogueAsset.cs`, `SpeakerProfile.cs`
@@ -112,9 +117,10 @@ The `DialogueManager` manages the UI and conversation flow automatically.
 
 ## 5. Player Controller
 
-**Script:** `SimpleFPSControllerNewInput.cs`
+**Script:** `Player.cs` (`SimpleFPSControllerNewInput`)
 
-Handles movement, looking, jumping, crouching, and footsteps.
+Handles movement, looking, jumping, and crouching. It exposes movement state;
+`PlayerFootstepAudio` handles footstep timing and playback through `SoundEmitter`.
 
 The `isInspecting` field is currently used to suspend player movement and camera look during inspection and dialogue.
 
@@ -123,6 +129,42 @@ When implementing new gameplay modes that take control away from the player, ens
 **Input:** The project currently uses both Unity's legacy and new Input System APIs. Set Active Input Handling to `Both`.
 
 ---
+
+## 6. Audio System
+
+**Namespace and location:** `HorrorAudio`, `Assets/Scripts/Audio`.
+
+Gameplay components report events or movement state. Audio adapters select sounds
+and call `SoundEmitter`; `SoundEngine` manages the listener, shared voice capacity,
+priority and environment state.
+
+| Component | Responsibility |
+| --- | --- |
+| `SoundEmitter` | Clips, layers, playback, EQ/effects, 3D settings and voice reuse |
+| `PlayerFootstepAudio` | Walk/sprint/crouch cadence and floor sound selection |
+| `DoorAudio` | Opening, closing and latch responses to door events |
+| `SoundImpact` | Collision sounds based on speed and surface |
+| `SoundSequencePlayer` / `SoundTrigger` | Timed sequences, trigger zones, UnityEvents and animation events |
+| `WorldSoundEmitter` | Continuous global or positional ambience with fades |
+| `SoundEnvironmentZone` / `SoundAcousticMaterial` | Room treatment and approximate obstruction/transmission |
+
+**Setup:** select the object and use **Tools > Horror Audio > Add Sound...**.
+Assign a direct clip, or create a **Horror Audio > Sound Profile** or **Sound
+Sequence** asset. Editor setup and previews remain available in development;
+their code is in the `Editor` directory.
+
+**Extension:** use `PlayDefault()`, `PlayClip(...)`, `Play(profile, ...)` and
+`StopAll()` on the emitter. Add an event adapter for new gameplay behaviour.
+Dialogues already route recorded lines and generated syllables through emitters.
+For older AudioSources, use **Import Existing Audio In Open Scenes**.
+
+**Conventions:** lower numeric priority is more important; -1 inherits the source
+or profile priority. Direct clips use emitter effects; reusable profiles own their
+effects. Room treatment and obstruction are approximations. Production capacity
+must be profiled with the game's real clips and scenes.
+
+Full setup, sound creation, APIs and optimization details:
+[Audio documentation](audiodocumentation.md).
 
 ## Adding New Systems
 

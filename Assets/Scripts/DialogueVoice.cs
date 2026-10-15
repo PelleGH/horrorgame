@@ -10,6 +10,9 @@ using UnityEngine;
 /// </summary>
 public class DialogueVoice : MonoBehaviour
 {
+    [Tooltip("Optional shared mixer routing. Existing voice synthesis and timing are preserved.")]
+    public UnityEngine.Audio.AudioMixerGroup outputMixer;
+    public HorrorAudio.SoundEmitter soundEmitter;
     private const int PoolSize = 4;
     private const int SampleRate = 22050;
 
@@ -33,38 +36,18 @@ public class DialogueVoice : MonoBehaviour
 
     private static AudioClip[] generatedClips;
 
-    private AudioSource[] pool;
-    private AudioLowPassFilter[] filters;
-    private AudioDistortionFilter[] distortions;
-    private int next;
-
     private void Awake()
     {
-        pool = new AudioSource[PoolSize];
-        filters = new AudioLowPassFilter[PoolSize];
-        distortions = new AudioDistortionFilter[PoolSize];
-
-        for (int i = 0; i < PoolSize; i++)
+        if (soundEmitter == null)
         {
-            // One object per slot: a low-pass filter affects every AudioSource on its GameObject,
-            // so sharing one object would make the filters stack on each other.
-            GameObject slot = new GameObject("VoiceSlot" + i);
-            slot.transform.SetParent(transform, false);
-
-            AudioSource source = slot.AddComponent<AudioSource>();
-            source.playOnAwake = false;
-            source.loop = false;
-            source.spatialBlend = 0f;
-            pool[i] = source;
-
-            // Filters run in component order: distortion first, then the low-pass tames its harsh
-            // overtones. Both are set per sound (see Play).
-            distortions[i] = slot.AddComponent<AudioDistortionFilter>();
-            distortions[i].distortionLevel = 0f;
-
-            filters[i] = slot.AddComponent<AudioLowPassFilter>();
-            filters[i].cutoffFrequency = 22000f;
+            GameObject root = new GameObject("Dialogue syllable audio"); root.transform.SetParent(transform, false);
+            soundEmitter = root.AddComponent<HorrorAudio.SoundEmitter>();
+            soundEmitter.priority = 32; soundEmitter.Prewarm(4);
+            soundEmitter.maxVoices = PoolSize; soundEmitter.soundSettings.volume = 1f;
+            soundEmitter.soundSettings.spatialBlend = 0f; soundEmitter.useEnvironment = false;
+            soundEmitter.soundSettings.output = outputMixer;
         }
+        if (outputMixer != null) soundEmitter.soundSettings.output = outputMixer;
     }
 
     /// <summary>
@@ -90,34 +73,17 @@ public class DialogueVoice : MonoBehaviour
 
     public void StopAll()
     {
-        if (pool == null)
-            return;
-
-        foreach (AudioSource source in pool)
-            source.Stop();
+        if (soundEmitter != null) soundEmitter.StopAll();
     }
 
     private void Play(VoiceSettings settings, VoiceNote note)
     {
         AudioClip clip = PickClip(settings, note.clipIndex);
 
-        int slot = next;
-        next = (next + 1) % PoolSize;
-
-        AudioSource source = pool[slot];
-        source.Stop();
-        source.clip = clip;
-        source.pitch = Mathf.Clamp(settings.basePitch * Mathf.Pow(2f, note.semitones / 12f), 0.3f, 3f);
-
-        // Distortion makes the signal louder, so the volume is pulled back as it increases.
         float distortion = Mathf.Clamp01(settings.distortion);
-        distortions[slot].distortionLevel = distortion;
-        source.volume = note.volume * (1f - 0.4f * distortion);
-
-        // Exponential sweep so the slider feels even: 0 = open (22 kHz), 1 = very muffled (1.2 kHz).
-        filters[slot].cutoffFrequency = 22000f * Mathf.Pow(1200f / 22000f, Mathf.Clamp01(settings.muffle));
-
-        source.Play();
+        soundEmitter.PlayVoiceClip(clip, note.volume * (1f - 0.4f * distortion),
+            Mathf.Clamp(settings.basePitch * Mathf.Pow(2f, note.semitones / 12f), 0.3f, 3f),
+            distortion, 22000f * Mathf.Pow(1200f / 22000f, Mathf.Clamp01(settings.muffle)));
     }
 
     private static AudioClip PickClip(VoiceSettings settings, int index)

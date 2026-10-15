@@ -29,28 +29,15 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
 
 
-    [Header("Footsteps")]
-    public AudioSource footstepSource;
-    public AudioClip[] footstepClips;
-    public float walkStepInterval = 0.5f;
-    public float sprintStepInterval = 0.35f;
-    public float minMoveThreshold = 0.1f;
-    public Vector2 footstepPitchRange = new Vector2(0.95f, 1.05f);
-    public Vector2 footstepVolumeRange = new Vector2(0.9f, 1f);
-
-    [Header("Crouch Footsteps")]
-    public float crouchStepInterval = 0.7f;
-    public Vector2 crouchVolumeRange = new Vector2(0.4f, 0.6f);
-    public Vector2 crouchPitchRange = new Vector2(0.85f, 0.95f);
+    public bool IsGrounded { get; private set; }
+    public float MovementInputMagnitude { get; private set; }
+    public bool IsSprinting { get; private set; }
+    public bool IsCrouching => isCrouching;
 
     private CharacterController controller;
     private Vector3 velocity;
     private float pitch = 0f;
 
-    private float stepTimer = 0f;
-    private int lastFootstepIndex = -1;
-    private bool wasMovingLastFrame = false;
-    private bool wasSprintingLastFrame = false;
     private float standingCameraLocalY;
     private float crouchingCameraLocalY;
     private float normalHeight;
@@ -93,8 +80,6 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
-        if (footstepSource == null)
-            footstepSource = GetComponent<AudioSource>();
     }
 
     void Update()
@@ -105,7 +90,17 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
             Move();
         }
 
+        if (isInspecting) ResetMovementState();
         UpdateCameraHeight();
+    }
+
+    void OnDisable() => ResetMovementState();
+
+    void ResetMovementState()
+    {
+        MovementInputMagnitude = 0f;
+        IsSprinting = false;
+        IsGrounded = false;
     }
 
     void Look()
@@ -193,8 +188,9 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
 
-        bool isMoving = move.magnitude > minMoveThreshold;
-        HandleFootsteps(grounded, isMoving, sprinting, crouching);
+        IsGrounded = grounded;
+        MovementInputMagnitude = move.magnitude;
+        IsSprinting = sprinting;
     }
 
     void SetCrouchState(bool crouching)
@@ -245,93 +241,4 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
         cameraTransform.localPosition = localPos;
     }
 
-    void HandleFootsteps(bool grounded, bool isMoving, bool sprinting, bool crouching)
-    {
-        if (footstepSource == null || footstepClips == null || footstepClips.Length == 0)
-            return;
-
-        if (!grounded || !isMoving)
-        {
-            stepTimer = 0f;
-            wasMovingLastFrame = false;
-            wasSprintingLastFrame = sprinting;
-            return;
-        }
-
-        float currentInterval;
-        float previousInterval;
-
-        if (crouching)
-        {
-            currentInterval = crouchStepInterval;
-            previousInterval = crouchStepInterval;
-        }
-        else
-        {
-            currentInterval = sprinting ? sprintStepInterval : walkStepInterval;
-            previousInterval = wasSprintingLastFrame ? sprintStepInterval : walkStepInterval;
-        }
-
-        if (!wasMovingLastFrame)
-        {
-            PlayRandomFootstep(crouching);
-            stepTimer = currentInterval;
-        }
-        else
-        {
-            if (sprinting != wasSprintingLastFrame && previousInterval > 0f)
-            {
-                float progress = 1f - (stepTimer / previousInterval);
-                progress = Mathf.Clamp01(progress);
-                stepTimer = currentInterval * (1f - progress);
-            }
-
-            stepTimer -= Time.deltaTime;
-
-            if (stepTimer <= 0f)
-            {
-                PlayRandomFootstep(crouching);
-                stepTimer = currentInterval;
-            }
-        }
-
-        wasMovingLastFrame = true;
-        wasSprintingLastFrame = sprinting;
-    }
-
-    void PlayRandomFootstep(bool crouching)
-    {
-        if (footstepClips.Length == 0)
-            return;
-
-        int clipIndex = 0;
-
-        if (footstepClips.Length == 1)
-        {
-            clipIndex = 0;
-        }
-        else
-        {
-            do
-            {
-                clipIndex = Random.Range(0, footstepClips.Length);
-            }
-            while (clipIndex == lastFootstepIndex);
-        }
-
-        lastFootstepIndex = clipIndex;
-
-        if (crouching)
-        {
-            footstepSource.pitch = Random.Range(crouchPitchRange.x, crouchPitchRange.y);
-            footstepSource.volume = Random.Range(crouchVolumeRange.x, crouchVolumeRange.y);
-        }
-        else
-        {
-            footstepSource.pitch = Random.Range(footstepPitchRange.x, footstepPitchRange.y);
-            footstepSource.volume = Random.Range(footstepVolumeRange.x, footstepVolumeRange.y);
-        }
-
-        footstepSource.PlayOneShot(footstepClips[clipIndex]);
-    }
 }

@@ -125,6 +125,9 @@ GameObject:
   - component: {fileID: 7787490479245748951}
   - component: {fileID: 5230116171398150158}
   - component: {fileID: 7716824527702364130}
+  - component: {fileID: 5796218057491330220}
+  - component: {fileID: 5796218057491330221}
+  - component: {fileID: 5796218057491330222}
   m_Layer: 0
   m_Name: door_var 1 1
   m_TagString: Untagged
@@ -389,3 +392,69 @@ Transform:
   - {fileID: 5073210432244722885}
   m_Father: {fileID: 9080368756749569719}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+
+--- !u!114 &5796218057491330220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4632460562403020515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6519e2d858dd3ee40b32fdb20a0398b2, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  playOnEnable: 0
+  useEnvironment: 1
+
+  priority: 96
+  prewarmVoices: 2
+--- !u!114 &5796218057491330221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4632460562403020515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ce90d25832a42948e0d3a11cf0d4b35, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  emitter: {fileID: 5796218057491330220}
+
+--- !u!114 &5796218057491330222
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4632460562403020515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7587ee879fa41d3897f4f54ccbf9943, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  player: {fileID: 5796218057491330221}
+  opening:
+    sequence: {fileID: 0}
+    clip: {fileID: 0}
+    profile: {fileID: 11400000, guid: 363e43ae757dc50f78e7cc5022c2bfca, type: 2}
+    useEmitterSound: 0
+    volume: 1
+    pitch: 1
+  closing:
+    sequence: {fileID: 0}
+    clip: {fileID: 0}
+    profile: {fileID: 11400000, guid: 51e6ead7d986a1ab6b4db6cdaf20d187, type: 2}
+    useEmitterSound: 0
+    volume: 1
+    pitch: 1
+  latched:
+    sequence: {fileID: 0}
+    clip: {fileID: 0}
+    profile: {fileID: 11400000, guid: 2395247dbe292bea2ff8ce7ffa596aab, type: 2}
+    useEmitterSound: 0
+    volume: 1
+    pitch: 1
