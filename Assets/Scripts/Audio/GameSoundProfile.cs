@@ -45,8 +45,13 @@ namespace HorrorAudio
                 }
                 choices = generated;
             }
-            int start = UnityEngine.Random.Range(0, choices.Length);
-            if (choices.Length > 1 && start == lastIndex) start = (start + 1) % choices.Length;
+            int start;
+            if (choices.Length > 1 && lastIndex >= 0 && lastIndex < choices.Length)
+            {
+                start = UnityEngine.Random.Range(0, choices.Length - 1);
+                if (start >= lastIndex) start++;
+            }
+            else start = UnityEngine.Random.Range(0, choices.Length);
             for (int i = 0; i < choices.Length; i++)
             {
                 int index = (start + i) % choices.Length;

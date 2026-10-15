@@ -91,7 +91,7 @@ public class DialogueManager : MonoBehaviour
     private TextMeshProUGUI interactPromptLabel;
     private GameObject choicePanel;
     private readonly List<TextMeshProUGUI> choiceLabels = new List<TextMeshProUGUI>();
-    private AudioSource audioSource;
+    public HorrorAudio.SoundEmitter lineSoundEmitter;
     private DialogueVoice voice;
 
     private readonly List<DialogueChoice> activeChoices = new List<DialogueChoice>();
@@ -131,9 +131,15 @@ public class DialogueManager : MonoBehaviour
         instance = this;
 
         // Plays per-line voice clips (DialogueLine.voice). The babble voice has its own sources.
-        audioSource = gameObject.AddComponent<AudioSource>();
-        audioSource.playOnAwake = false;
-        audioSource.spatialBlend = 0f;
+        if (lineSoundEmitter == null)
+        {
+            GameObject root = new GameObject("Dialogue recorded audio"); root.transform.SetParent(transform, false);
+            lineSoundEmitter = root.AddComponent<HorrorAudio.SoundEmitter>();
+            lineSoundEmitter.priority = 32; lineSoundEmitter.Prewarm(1);
+            lineSoundEmitter.soundSettings.volume = 1f;
+            lineSoundEmitter.soundSettings.spatialBlend = 0f;
+            lineSoundEmitter.useEnvironment = false;
+        }
 
         voice = gameObject.AddComponent<DialogueVoice>();
 
@@ -370,11 +376,10 @@ public class DialogueManager : MonoBehaviour
         continueLabel.gameObject.SetActive(false);
 
         voice.StopAll();
-        audioSource.Stop();
+        lineSoundEmitter.StopAll();
         if (line.voice != null)
         {
-            audioSource.pitch = 1f;
-            audioSource.PlayOneShot(line.voice);
+            lineSoundEmitter.PlayClip(line.voice);
         }
 
         onLineStarted?.Invoke(currentAsset, lineIndex);
@@ -444,7 +449,7 @@ public class DialogueManager : MonoBehaviour
         choiceMode = false;
         endFrame = Time.frameCount;
 
-        audioSource.Stop();
+        lineSoundEmitter.StopAll();
         voice.StopAll();
         ReleasePlayer();
 

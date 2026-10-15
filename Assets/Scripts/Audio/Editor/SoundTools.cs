@@ -6,6 +6,37 @@ namespace HorrorAudio.Editor
 {
     public static class SoundTools
     {
+        [MenuItem("GameObject/Horror Audio/World Emitter", false, 21)]
+        public static void CreateWorldEmitter()
+        {
+            Undo.IncrementCurrentGroup(); int group = Undo.GetCurrentGroup();
+            GameObject root = new GameObject("World Sound");
+            Undo.RegisterCreatedObjectUndo(root, "Create world emitter");
+            AddSoundWindow.Configure(root, null, SoundBehaviour.World, SoundStarter.KeepCurrent);
+            Undo.CollapseUndoOperations(group);
+            Selection.activeGameObject = root;
+        }
+        public static DoorAudio ConfigureDoor(Door door, SoundEmitter emitter)
+        {
+            var player = door.GetComponent<SoundSequencePlayer>() ?? Undo.AddComponent<SoundSequencePlayer>(door.gameObject);
+            var audio = door.GetComponent<DoorAudio>() ?? Undo.AddComponent<DoorAudio>(door.gameObject);
+            Undo.RecordObject(player, "Connect door sound"); Undo.RecordObject(audio, "Configure door sound");
+            player.emitter = emitter; audio.player = player;
+            Undo.RecordObject(emitter, "Set door priority");
+            if (emitter.priority < 0) emitter.priority = 96;
+            AddSoundWindow.Save(emitter);
+            SetDefault(audio.opening, "DoorOpen", emitter.HasDirectSound);
+            SetDefault(audio.closing, "DoorClose", emitter.HasDirectSound);
+            SetDefault(audio.latched, "Latch", false);
+            AddSoundWindow.Save(player); AddSoundWindow.Save(audio);
+            return audio;
+        }
+        static void SetDefault(SoundEvent sound, string profile, bool useEmitter)
+        {
+            if (sound.sequence != null || sound.clip != null || sound.profile != null || sound.useEmitterSound) return;
+            sound.useEmitterSound = useEmitter;
+            if (!useEmitter) sound.profile = Profile(profile);
+        }
         public static GameSoundProfile Profile(string name) => AssetDatabase.LoadAssetAtPath<GameSoundProfile>("Assets/Audio/Profiles/" + name + ".asset");
         [MenuItem("Tools/Horror Audio/Set Up Selected Objects")]
         public static void SetUpSelected()
@@ -18,18 +49,21 @@ namespace HorrorAudio.Editor
                 var player = selected.GetComponent<SimpleFPSControllerNewInput>();
                 if (player != null)
                 {
-                    Undo.RecordObject(player, "Configure footsteps");
-                    player.soundEmitter = emitter;
-                    if (player.footstepProfile == null) player.footstepProfile = Profile("Footsteps");
+                    var footsteps = selected.GetComponent<PlayerFootstepAudio>() ?? Undo.AddComponent<PlayerFootstepAudio>(selected);
+                    Undo.RecordObject(footsteps, "Configure footsteps");
+                    footsteps.soundEmitter = emitter;
+                    if (emitter.priority < 0) emitter.priority = 80;
+                    var source = footsteps.footstepSource != null ? footsteps.footstepSource : footsteps.GetComponent<AudioSource>();
+                    if (source != null) Undo.RecordObject(source, "Import footstep source");
+                    footsteps.ConnectExistingFootsteps();
+                    if (source != null) AddSoundWindow.Save(source);
+                    if (footsteps.footstepProfile == null && !emitter.HasDirectSound) footsteps.footstepProfile = Profile("Footsteps");
+                    AddSoundWindow.Save(footsteps);
                 }
                 Door door = selected.GetComponent<Door>();
                 if (door != null)
                 {
-                    Undo.RecordObject(door, "Configure door audio");
-                    door.soundEmitter = emitter;
-                    if (door.openSound == null) door.openSound = Profile("DoorOpen");
-                    if (door.closeSound == null) door.closeSound = Profile("DoorClose");
-                    if (door.latchSound == null) door.latchSound = Profile("Latch");
+                    ConfigureDoor(door, emitter);
                 }
                 if (player == null && door == null)
                 {
@@ -73,13 +107,17 @@ namespace HorrorAudio.Editor
         public override void OnInspectorGUI()
         {
             SoundEmitter emitter = (SoundEmitter)target;
+            WorldSoundEmitter worldController = emitter.GetComponent<WorldSoundEmitter>();
+            bool managedWorld = worldController != null && worldController.enabled;
             serializedObject.Update();
             using (new EditorGUI.DisabledScope(true)) Field("m_Script");
             EditorGUILayout.LabelField("Audio & Playback", EditorStyles.boldLabel);
             Field("audioClip", "Your Audio Clip"); Field("defaultProfile", "Reusable Profile (fallback)");
-            Field("playOnEnable"); Field("volume", "Object Volume"); Field("pitch", "Object Pitch");
+            if (managedWorld) EditorGUILayout.HelpBox("World Sound Emitter owns automatic looping, global/3D mode and fades. Configure those on its component.", MessageType.Info);
+            else Field("playOnEnable");
+            Field("volume", "Object Volume"); Field("pitch", "Object Pitch");
             if (emitter.HasDirectSound)
-            { Field("soundSettings.volume", "Clip Gain"); Field("soundSettings.loop"); Field("soundSettings.pitchVariation"); }
+            { Field("soundSettings.volume", "Clip Gain"); if (!managedWorld) Field("soundSettings.loop"); Field("soundSettings.pitchVariation"); }
             layers = EditorGUILayout.Foldout(layers, "Variations & Layers", true);
             if (layers) { Field("clipVariations"); Field("extraLayers"); }
             effects = EditorGUILayout.Foldout(effects, "Tone & Effects", true);
@@ -102,7 +140,7 @@ namespace HorrorAudio.Editor
                 Field("useSimulatedDoppler"); if (emitter.useSimulatedDoppler) Field("relativeSpeed");
             }
             advanced = EditorGUILayout.Foldout(advanced, "Advanced", true);
-            if (advanced) { Field("maxVoices"); Field("effectSmoothing"); }
+            if (advanced) { Field("maxVoices"); Field("priority"); Field("prewarmVoices"); Field("occlusionInterval"); Field("effectSmoothing"); Field("legacyTemplate"); }
             serializedObject.ApplyModifiedProperties();
             if (emitter.HasDirectSound)
             {
@@ -118,9 +156,22 @@ namespace HorrorAudio.Editor
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button(Application.isPlaying ? "Play Sound" : "Preview 2D"))
             {
-                if (Application.isPlaying) emitter.PlayDefault(); else SoundPreview.Play(emitter);
+                if (Application.isPlaying)
+                {
+                    var world = emitter.GetComponent<WorldSoundEmitter>();
+                    if (world != null && world.isActiveAndEnabled) world.StartWorldSound(); else emitter.PlayDefault();
+                }
+                else SoundPreview.Play(emitter);
             }
-            if (GUILayout.Button("Stop")) { if (Application.isPlaying) emitter.StopAll(); else SoundPreview.Stop(); }
+            if (GUILayout.Button("Stop"))
+            {
+                if (Application.isPlaying)
+                {
+                    var world = emitter.GetComponent<WorldSoundEmitter>();
+                    if (world != null && world.isActiveAndEnabled) world.StopWorldSound(); else emitter.StopAll();
+                }
+                else SoundPreview.Stop();
+            }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.HelpBox(Application.isPlaying ? emitter.LastPlaybackStatus + " Active voices: " + emitter.ActiveVoiceCount : SoundPreview.Status, MessageType.Info);
             DrawDiagnostics(emitter);
@@ -129,7 +180,7 @@ namespace HorrorAudio.Editor
         {
             if (!emitter.HasDirectSound && emitter.defaultProfile == null)
                 EditorGUILayout.HelpBox("No default sound assigned. An external door/footstep/impact profile can still trigger this emitter.", MessageType.Info);
-            if (!emitter.playOnEnable && emitter.GetComponent<Door>() == null && emitter.GetComponent<SimpleFPSControllerNewInput>() == null && emitter.GetComponent<SoundImpact>() == null)
+            if (!emitter.playOnEnable && emitter.GetComponent<WorldSoundEmitter>() == null && emitter.GetComponent<Door>() == null && emitter.GetComponent<SimpleFPSControllerNewInput>() == null && emitter.GetComponent<SoundImpact>() == null && emitter.GetComponent<SoundSequencePlayer>() == null)
                 EditorGUILayout.HelpBox("Manual trigger: call PlayDefault from a UnityEvent or animation event. Use Add Sound to connect another behaviour.", MessageType.Info);
             var impact = emitter.GetComponent<SoundImpact>();
             if (impact != null && (emitter.GetComponent<Rigidbody>() == null

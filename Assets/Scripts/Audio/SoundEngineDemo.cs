@@ -31,9 +31,10 @@ namespace HorrorAudio
             camera.gameObject.AddComponent<AudioListener>();
             SimpleFPSControllerNewInput controller = player.AddComponent<SimpleFPSControllerNewInput>();
             controller.cameraTransform = camera.transform;
-            controller.soundEmitter = player.AddComponent<SoundEmitter>();
-            controller.soundEmitter.useEnvironment = true;
-            controller.footstepProfile = footsteps;
+            var playerAudio = player.AddComponent<PlayerFootstepAudio>();
+            playerAudio.soundEmitter = player.GetComponent<SoundEmitter>();
+            playerAudio.soundEmitter.useEnvironment = true;
+            playerAudio.footstepProfile = footsteps;
             GameObject pivot = new GameObject("Test door hinge");
             pivot.transform.position = new Vector3(-1f, 0f, 2f);
             GameObject panel = Box("Door panel", Vector3.zero, new Vector3(1.4f, 2.3f, 0.15f), new Color(0.27f, 0.18f, 0.12f));
@@ -41,8 +42,8 @@ namespace HorrorAudio
             panel.transform.localPosition = new Vector3(0.7f, 1.15f, 0f);
             door = pivot.AddComponent<Door>();
             door.doorRoot = pivot.transform;
-            door.soundEmitter = pivot.AddComponent<SoundEmitter>();
-            door.openSound = doorOpen; door.closeSound = doorClose; door.latchSound = latch;
+            var doorAudio = pivot.AddComponent<DoorAudio>();
+            doorAudio.opening.profile = doorOpen; doorAudio.closing.profile = doorClose; doorAudio.latched.profile = latch;
             GameObject room = new GameObject("Reverb zone - right side of room");
             room.transform.position = new Vector3(3f, 1.5f, 0f);
             room.AddComponent<BoxCollider>().size = new Vector3(4f, 3f, 12f);

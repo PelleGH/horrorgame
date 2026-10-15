@@ -150,6 +150,8 @@ GameObject:
   - component: {fileID: 1908617257171588281}
   - component: {fileID: 8706895932312586567}
   - component: {fileID: 3648201827958366877}
+  - component: {fileID: 5796218057491330212}
+  - component: {fileID: 5796218057491330213}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -253,18 +255,12 @@ MonoBehaviour:
     m_Bits: 4294967295
   headCheckPadding: 0.02
   mouseSensitivity: 2
-  cameraTransform: {fileID: 0}
+  cameraTransform: {fileID: 5723947437459877860}
   maxLookAngle: 80
-  footstepSource: {fileID: 0}
-  footstepClips: []
-  walkStepInterval: 0.5
-  sprintStepInterval: 0.35
-  minMoveThreshold: 0.1
-  footstepPitchRange: {x: 0.95, y: 1.05}
-  footstepVolumeRange: {x: 0.9, y: 1}
-  crouchStepInterval: 0.7
-  crouchVolumeRange: {x: 0.4, y: 0.6}
-  crouchPitchRange: {x: 0.85, y: 0.95}
+  crouchCameraDrop: 0.5
+  cameraCrouchSmooth: 12
+  cameraHeightMultiplier: 0.85
+  isInspecting: 0
 --- !u!143 &3648201827958366877
 CharacterController:
   m_ObjectHideFlags: 0
@@ -290,3 +286,152 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5796218057491330212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4708045582468190602}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6519e2d858dd3ee40b32fdb20a0398b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  defaultProfile: {fileID: 0}
+  audioClip: {fileID: 0}
+  clipVariations:
+  - {fileID: 8300000, guid: ff3e2a0a35c750f4c85b73662e4fa79d, type: 3}
+  - {fileID: 8300000, guid: c9c8c21c12dd6b34984c0f2a606301ba, type: 3}
+  - {fileID: 8300000, guid: c8d7905d47f8f2440a25f97c1bbb31c0, type: 3}
+  - {fileID: 8300000, guid: 7f243f1c2b139c548a59a2a80b5f88fd, type: 3}
+  - {fileID: 8300000, guid: 22861390b5d18284e8faa24a85e4e118, type: 3}
+  - {fileID: 8300000, guid: ba55cc1c18fd02643bf5f8588aacd20b, type: 3}
+  - {fileID: 8300000, guid: 5a9624a3fe309804f9b0945182a99f32, type: 3}
+  - {fileID: 8300000, guid: f865dd580f26d68438afd78697223daa, type: 3}
+  - {fileID: 8300000, guid: 6456542ab179f1d4089084e64fdfb246, type: 3}
+  - {fileID: 8300000, guid: 16c1f635563953b4482ec5e1e6f7b692, type: 3}
+  - {fileID: 8300000, guid: 936c6492fe1bffd4294df2e55c48b535, type: 3}
+  - {fileID: 8300000, guid: f8f1350e662b28347a6515d6d7cfa601, type: 3}
+  - {fileID: 8300000, guid: 9e3c4e4910a5ac945ab3067f03ec381e, type: 3}
+  - {fileID: 8300000, guid: 70b34d8af1d546f449972a4a512ed5b4, type: 3}
+  - {fileID: 8300000, guid: 5970d54d8707bc040b6d5a76fa509cb6, type: 3}
+  - {fileID: 8300000, guid: 4cde63bfc07aedd419562e58e1d1b03a, type: 3}
+  - {fileID: 8300000, guid: 4ba965b4aeb29d94da233e59dd26ea3c, type: 3}
+  - {fileID: 8300000, guid: 28141674d7d900942b2b17a5a3e97295, type: 3}
+  - {fileID: 8300000, guid: 4a037651c1496f246bb2b01ce45140e3, type: 3}
+  - {fileID: 8300000, guid: 3cb5b5c4762c94941ae224236694558b, type: 3}
+  - {fileID: 8300000, guid: d3e4b87cff5135e4ab88a2b9d9eb010f, type: 3}
+  - {fileID: 8300000, guid: 1993be16f5a0aa4499a0746cbf922525, type: 3}
+  - {fileID: 8300000, guid: 85bd13ef06b0bdc418d367dc7d07291b, type: 3}
+  - {fileID: 8300000, guid: 2f2e99f7c29e4e947a344d74bce2d376, type: 3}
+  - {fileID: 8300000, guid: 60fa6d3364d74004ebf0412bc21dc3b4, type: 3}
+  - {fileID: 8300000, guid: c1053a4a54699a74ba8860ec9a3b3841, type: 3}
+  - {fileID: 8300000, guid: 1462314116931024a8a793430ec4fd44, type: 3}
+  - {fileID: 8300000, guid: e8e52d0a1b4bdc64bbe3c6a9d8e7ebec, type: 3}
+  - {fileID: 8300000, guid: fc36171eea43e564b92d722f67b9b0be, type: 3}
+  - {fileID: 8300000, guid: 19d8fffc8dc2d2d46ac8d8800d682e40, type: 3}
+  - {fileID: 8300000, guid: 762fa35a828b50b4bb3a4ae0558c4ef3, type: 3}
+  - {fileID: 8300000, guid: 14038d1ca24fe834aa6ebd0956c6fbeb, type: 3}
+  extraLayers: []
+  soundSettings:
+    loop: 0
+    volume: 1
+    pitchVariation: {x: 1, y: 1}
+    spatialBlend: 1
+    minDistance: 1
+    maxDistance: 500
+    doppler: 1
+    output: {fileID: 0}
+    bassDb: 8.1
+    trebleDb: 0
+    distortion: 0
+    lowPass: 22000
+    highPass: 10
+    reverb: 0
+    reverbLevel: -1500
+    echoWet: 0
+    echoDelay: 180
+    echoDecay: 0.25
+  legacyTemplate: {fileID: 0}
+  playOnEnable: 0
+  maxVoices: 8
+  volume: 1
+  pitch: 1
+  effectSmoothing: 8
+  useEnvironment: 1
+  occlusion: 0
+  occlusionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  occludedVolume: 0.35
+  occludedLowPass: 1600
+  respondToTrainMotion: 0
+  rideVolume: {x: 0.2, y: 1}
+  ridePitch: {x: 0.8, y: 1.3}
+  useSimulatedDoppler: 0
+  relativeSpeed: 0
+  priority: 80
+  prewarmVoices: 2
+--- !u!114 &5796218057491330213
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4708045582468190602}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7ca9cbec4204caebe8df65d62d5705b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  footstepSource: {fileID: 0}
+  footstepClips:
+  - {fileID: 8300000, guid: ff3e2a0a35c750f4c85b73662e4fa79d, type: 3}
+  - {fileID: 8300000, guid: c9c8c21c12dd6b34984c0f2a606301ba, type: 3}
+  - {fileID: 8300000, guid: c8d7905d47f8f2440a25f97c1bbb31c0, type: 3}
+  - {fileID: 8300000, guid: 7f243f1c2b139c548a59a2a80b5f88fd, type: 3}
+  - {fileID: 8300000, guid: 22861390b5d18284e8faa24a85e4e118, type: 3}
+  - {fileID: 8300000, guid: ba55cc1c18fd02643bf5f8588aacd20b, type: 3}
+  - {fileID: 8300000, guid: 5a9624a3fe309804f9b0945182a99f32, type: 3}
+  - {fileID: 8300000, guid: f865dd580f26d68438afd78697223daa, type: 3}
+  - {fileID: 8300000, guid: 6456542ab179f1d4089084e64fdfb246, type: 3}
+  - {fileID: 8300000, guid: 16c1f635563953b4482ec5e1e6f7b692, type: 3}
+  - {fileID: 8300000, guid: 936c6492fe1bffd4294df2e55c48b535, type: 3}
+  - {fileID: 8300000, guid: f8f1350e662b28347a6515d6d7cfa601, type: 3}
+  - {fileID: 8300000, guid: 9e3c4e4910a5ac945ab3067f03ec381e, type: 3}
+  - {fileID: 8300000, guid: 70b34d8af1d546f449972a4a512ed5b4, type: 3}
+  - {fileID: 8300000, guid: 5970d54d8707bc040b6d5a76fa509cb6, type: 3}
+  - {fileID: 8300000, guid: 4cde63bfc07aedd419562e58e1d1b03a, type: 3}
+  - {fileID: 8300000, guid: 4ba965b4aeb29d94da233e59dd26ea3c, type: 3}
+  - {fileID: 8300000, guid: 28141674d7d900942b2b17a5a3e97295, type: 3}
+  - {fileID: 8300000, guid: 4a037651c1496f246bb2b01ce45140e3, type: 3}
+  - {fileID: 8300000, guid: 3cb5b5c4762c94941ae224236694558b, type: 3}
+  - {fileID: 8300000, guid: d3e4b87cff5135e4ab88a2b9d9eb010f, type: 3}
+  - {fileID: 8300000, guid: 1993be16f5a0aa4499a0746cbf922525, type: 3}
+  - {fileID: 8300000, guid: 85bd13ef06b0bdc418d367dc7d07291b, type: 3}
+  - {fileID: 8300000, guid: 2f2e99f7c29e4e947a344d74bce2d376, type: 3}
+  - {fileID: 8300000, guid: 60fa6d3364d74004ebf0412bc21dc3b4, type: 3}
+  - {fileID: 8300000, guid: c1053a4a54699a74ba8860ec9a3b3841, type: 3}
+  - {fileID: 8300000, guid: 1462314116931024a8a793430ec4fd44, type: 3}
+  - {fileID: 8300000, guid: e8e52d0a1b4bdc64bbe3c6a9d8e7ebec, type: 3}
+  - {fileID: 8300000, guid: fc36171eea43e564b92d722f67b9b0be, type: 3}
+  - {fileID: 8300000, guid: 19d8fffc8dc2d2d46ac8d8800d682e40, type: 3}
+  - {fileID: 8300000, guid: 762fa35a828b50b4bb3a4ae0558c4ef3, type: 3}
+  - {fileID: 8300000, guid: 14038d1ca24fe834aa6ebd0956c6fbeb, type: 3}
+  walkStepInterval: 0.5
+  sprintStepInterval: 0.35
+  minMoveThreshold: 0.1
+  footstepPitchRange: {x: 0.95, y: 1.05}
+  footstepVolumeRange: {x: 0.9, y: 1}
+  crouchStepInterval: 0.7
+  crouchVolumeRange: {x: 0.4, y: 0.6}
+  soundEmitter: {fileID: 5796218057491330212}
+  footstepProfile: {fileID: 0}
+  useOriginalFootstepDynamics: 0
+  footstepSurfaceMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  sprintFootstepGain: 1.2
+  crouchFootstepGain: 0.45
+  crouchPitchRange: {x: 0.85, y: 0.95}

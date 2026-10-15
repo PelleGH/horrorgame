@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace HorrorAudio.Editor
 {
-    public enum SoundBehaviour { ManualEvent, Ambience, Footsteps, Door, Collision }
+    public enum SoundBehaviour { ManualEvent, Ambience, Footsteps, Door, Collision, World, TriggerZone }
     public enum SoundStarter { KeepCurrent, Neutral, MetalImpact, SoftWind, SmallTrainCar }
 
     public class AddSoundWindow : EditorWindow
@@ -35,7 +35,7 @@ namespace HorrorAudio.Editor
             starter = (SoundStarter)EditorGUILayout.EnumPopup("Starting settings", starter);
             if (clip == null && starter != SoundStarter.KeepCurrent)
                 EditorGUILayout.HelpBox("Starting settings affect direct audio files. A reusable profile owns its own effects.", MessageType.Info);
-            EditorGUILayout.HelpBox("Ambience starts automatically. Other behaviours connect existing components. Manual Event exposes PlayDefault for UnityEvents and animation events. A collision object needs its own solid collider and Rigidbody.", MessageType.Info);
+            EditorGUILayout.HelpBox("Ambience starts automatically. Other behaviours connect existing components. Manual Event exposes PlayDefault for UnityEvents and animation events. TriggerZone adds a trigger box to an empty object; the entering actor needs a CharacterController or Rigidbody. A collision object needs its own solid collider and Rigidbody.", MessageType.Info);
             if (behaviour == SoundBehaviour.Collision && selectedObject != null && selectedObject.GetComponent<Rigidbody>() == null)
                 EditorGUILayout.HelpBox("Add a Rigidbody to this object's physics root first. This tool does not change your object's physics.", MessageType.Warning);
             using (new EditorGUI.DisabledScope(selectedObject == null || Application.isPlaying))
@@ -54,6 +54,8 @@ namespace HorrorAudio.Editor
         public static SoundEmitter Configure(GameObject target, AudioClip clip, SoundBehaviour behaviour, SoundStarter starter)
         {
             if (target == null) throw new System.InvalidOperationException("Select an object first.");
+            if (behaviour == SoundBehaviour.World && (target.GetComponent<Door>() != null || target.GetComponent<SimpleFPSControllerNewInput>() != null || target.GetComponent<SoundImpact>() != null))
+                throw new System.InvalidOperationException("Use a dedicated empty object for continuous world sound.");
             if (EditorUtility.IsPersistent(target)) throw new System.InvalidOperationException("Open this prefab in Prefab Mode before configuring its audio.");
             if (behaviour == SoundBehaviour.Footsteps && target.GetComponent<SimpleFPSControllerNewInput>() == null)
                 throw new System.InvalidOperationException("Select the object containing your player controller.");
@@ -62,6 +64,9 @@ namespace HorrorAudio.Editor
             if (behaviour == SoundBehaviour.Collision && (target.GetComponent<Rigidbody>() == null
                 || !System.Array.Exists(target.GetComponentsInChildren<Collider>(), collider => collider.enabled && !collider.isTrigger)))
                 throw new System.InvalidOperationException("Collision audio needs a Rigidbody and collider on this physics object.");
+            if (behaviour == SoundBehaviour.TriggerZone && target.GetComponent<Collider>() != null &&
+                !System.Array.Exists(target.GetComponents<Collider>(), collider => collider.enabled && collider.isTrigger))
+                throw new System.InvalidOperationException("Use a dedicated trigger object or add a trigger collider first.");
             Undo.IncrementCurrentGroup(); int group = Undo.GetCurrentGroup(); Undo.SetCurrentGroupName("Add sound");
             SoundEmitter emitter = target.GetComponent<SoundEmitter>() ?? Undo.AddComponent<SoundEmitter>(target);
             Undo.RecordObject(emitter, "Configure sound");
@@ -72,17 +77,42 @@ namespace HorrorAudio.Editor
             else emitter.soundSettings.loop = false;
             switch (behaviour)
             {
+                case SoundBehaviour.World:
+                    var world = target.GetComponent<WorldSoundEmitter>() ?? Undo.AddComponent<WorldSoundEmitter>(target);
+                    Undo.RecordObject(world, "Connect world sound"); world.emitter = emitter;
+                    if (!emitter.HasDirectSound && emitter.defaultProfile == null) emitter.defaultProfile = SoundTools.Profile("Wind");
+                    Save(world); break;
                 case SoundBehaviour.Footsteps:
-                    var player = target.GetComponent<SimpleFPSControllerNewInput>();
+                    var player = target.GetComponent<PlayerFootstepAudio>() ?? Undo.AddComponent<PlayerFootstepAudio>(target);
                     Undo.RecordObject(player, "Connect footsteps"); player.soundEmitter = emitter;
+                    if (emitter.priority < 0) emitter.priority = 80;
+                    var footstepSource = player.footstepSource != null ? player.footstepSource : player.GetComponent<AudioSource>();
+                    if (footstepSource != null) Undo.RecordObject(footstepSource, "Import footstep source");
+                    player.ConnectExistingFootsteps();
+                    if (footstepSource != null) Save(footstepSource);
                     if (player.footstepProfile == null && !emitter.HasDirectSound) player.footstepProfile = SoundTools.Profile("Footsteps");
                     Save(player); break;
                 case SoundBehaviour.Door:
-                    var door = target.GetComponent<Door>();
-                    Undo.RecordObject(door, "Connect door"); door.soundEmitter = emitter;
-                    if (!emitter.HasDirectSound && door.openSound == null) door.openSound = SoundTools.Profile("DoorOpen");
-                    if (!emitter.HasDirectSound && door.closeSound == null) door.closeSound = SoundTools.Profile("DoorClose");
-                    Save(door); break;
+                    var doorAudio = SoundTools.ConfigureDoor(target.GetComponent<Door>(), emitter);
+                    if (clip != null)
+                    {
+                        Undo.RecordObject(doorAudio, "Assign door file");
+                        doorAudio.opening.sequence = null; doorAudio.closing.sequence = null;
+                        doorAudio.opening.clip = clip; doorAudio.closing.clip = clip;
+                        Save(doorAudio);
+                    }
+                    break;
+                case SoundBehaviour.TriggerZone:
+                    var trigger = target.GetComponent<SoundTrigger>() ?? Undo.AddComponent<SoundTrigger>(target);
+                    var sequencePlayer = target.GetComponent<SoundSequencePlayer>();
+                    Undo.RecordObject(trigger, "Configure trigger"); Undo.RecordObject(sequencePlayer, "Configure sequence player");
+                    trigger.player = sequencePlayer; sequencePlayer.emitter = emitter;
+                    trigger.entered.useEmitterSound = true;
+                    if (target.GetComponent<Collider>() == null)
+                    {
+                        var box = Undo.AddComponent<BoxCollider>(target); box.isTrigger = true;
+                    }
+                    Save(trigger); Save(sequencePlayer); break;
                 case SoundBehaviour.Collision:
                     var impact = target.GetComponent<SoundImpact>() ?? Undo.AddComponent<SoundImpact>(target);
                     Undo.RecordObject(impact, "Connect collision"); impact.emitter = emitter;

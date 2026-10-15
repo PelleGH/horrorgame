@@ -29,7 +29,9 @@ MonoBehaviour:
   minDistance: 1
   maxDistance: 25
   dopplerLevel: 0
-  priority: 128
+  priority: 256
+  bassDb: 0
+  trebleDb: 0
   distortion: 0
   lowPass: 22000
   highPass: 10

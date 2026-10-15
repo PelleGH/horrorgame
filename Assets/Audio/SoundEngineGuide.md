@@ -21,6 +21,72 @@ procedural examples, not finished recordings or realistic Foley.
 
 ## Add audio to your game
 
+### Existing game audio is routed through Horror Audio
+
+The Player prefab now contains a SoundEmitter with the same 32 footstep files
+previously assigned by the testlevel scene. No audio files are regenerated or
+replaced. Its clip variations can be edited directly in the SoundEmitter Inspector.
+PlayerFootstepAudio owns footstep timing, pitch/volume ranges, surface detection and legacy clip compatibility. SimpleFPSControllerNewInput only reports movement state and contains no audio logic. Other legacy
+players with an unconfigured emitter import their existing array at startup.
+
+**Use Original Footstep Dynamics** retains the original walk/crouch pitch and
+volume ranges. The existing walk, sprint and crouch timing is preserved in PlayerFootstepAudio.
+Turn this option off to use the newer sprint/crouch gain controls instead. Explicit
+SoundSurface overrides still take precedence. The old footstep AudioSource stops
+and disables so it cannot play the same step twice; it remains a metadata reference
+for custom rolloff curves and specialised settings.
+
+Recorded dialogue lines and procedural DialogueVoice syllables now also play through
+SoundEmitter. The syllable generator, contour, muffle, distortion compensation and
+four-voice replacement policy are preserved. DialogueManager exposes Line Sound
+Emitter; DialogueVoice exposes Sound Emitter. Both create dedicated child emitters
+when references are empty, with unity gain and 2D sound to match the previous
+playback. Their emitter controls and the engine master volume now affect dialogue.
+Rooms remain off for dialogue by default; enable Use Environment if desired.
+
+For older objects, use **Tools > Horror Audio > Import Existing Audio In Open Scenes**.
+The tool copies assigned clips and source configuration, creates an
+**Existing AudioSource Adapter**, and disables old output. It supports Undo and
+does not save scenes automatically. Supported Play/Stop/PlayOneShot persistent
+UnityEvents in the open scenes are redirected to the adapter. Custom scripts,
+animation events or third-party systems calling AudioSource directly must instead
+call the adapter or SoundEmitter; native AudioSource calls cannot be intercepted.
+Clipless scripted sources are not guessed or replaced. Re-running import skips
+already imported sources. Open prefab assets in Prefab Mode to configure them.
+
+The adapter provides Play(), Stop() and PlayOneShot(AudioClip). Source volume,
+pitch, loop, mixer output, distance and Doppler are copied. The original source
+remains as Legacy Template for rolloff curves, pan, spread, mute, listener flags,
+priority and spatializer settings. Enabled basic distortion, high/low-pass, echo
+and reverb preset/level are copied where supported. Custom reverb parameters,
+chorus and third-party DSP are not translated automatically.
+
+### Always-on world ambience
+
+Create **GameObject > Horror Audio > World Emitter**, or choose **World** in Add
+Sound on a dedicated empty object. The creation menu supplies the generated Wind
+profile as a starting sound. Replace it with your own Audio Clip or profile in
+SoundEmitter. WorldSoundEmitter manages the existing emitter's playback:
+
+- Starts automatically, loops all layers and retries once per second if voice
+  capacity temporarily prevents playback.
+- **Global Sound** is on by default: 2D sound heard throughout the world, without
+  positional attenuation. Turn it off for a 3D source using the usual distances.
+- Fade In / Fade Out provide smooth start/stop without changing the authored volume.
+- **StartWorldSound() / StopWorldSound()** can be called by UnityEvents or triggers.
+  Inspector Play/Stop also controls the world emitter and respects its fades.
+- Disabling the component stops its sound immediately. Re-enabling starts it again.
+- **Persist Across Scenes** optionally keeps a dedicated root object alive. Place
+  it once in a bootstrap scene; the system does not deduplicate world emitters in
+  subsequent scenes. A child object cannot enable persistence.
+
+Bass, effects, layering, room adaptation and train controls remain in SoundEmitter.
+Global sound ignores wall occlusion because it has no positional path; room effects
+can still apply when Use Environment is enabled. Shared profile assets are not
+modified to enforce looping or 2D/3D mode. Use a dedicated object, separate from
+door, player or impact emitters, because the world component owns its playback.
+For a clean continuous sound, provide a clip with a seamless loop.
+
 ### Add Sound workflow
 
 Select an object and open **Tools > Horror Audio > Add Sound...**, or right-click
@@ -84,10 +150,10 @@ external profile owns its own effects. The outer emitter Volume/Pitch multiply
 both kinds of sound. Changing the clip/variations requires a new playback; effects
 and volume update while playing.
 
-Door has optional **Open Clip**, **Close Clip** and **Latch Clip** fields, and
-SoundImpact has an **Impact Clip** field. These use the owning emitter's Sound
-Settings. If no action clip is assigned, a direct emitter file is used for door
-movement and object impacts before the starter profiles. Footsteps use the direct
+DoorAudio has independent Opening, Closing and Latched events. Each accepts a
+Clip, Profile or Sequence. Direct clips use the owning emitter's Sound Settings.
+SoundImpact has an Impact Clip field and falls back to a direct emitter sound
+before its default profile. Footsteps use the direct
 file when the floor does not explicitly supply a SoundSurface footstep override.
 Door, impact and character events are one-shot even if the emitter's ambience
 setting has Loop enabled. A surface's explicit profile takes precedence for
@@ -100,11 +166,12 @@ Use **Tools > Horror Audio > Set Up Selected Objects**. This supports multiple
 selected objects and Undo, and records prefab instance overrides. Running it again
 preserves already assigned profiles and audio files.
 
-- **Player:** adds/reuses SoundEmitter and assigns the Footsteps profile. Your
-  existing movement, crouch and step timing still trigger the sounds. Old
-  AudioSource/AudioClip footsteps remain the fallback when no profile is assigned.
+- **Player:** adds/reuses PlayerFootstepAudio and SoundEmitter, and assigns the
+  Footsteps profile when no direct clips are configured. PlayerFootstepAudio reads
+  movement state from the controller and owns step timing. Existing AudioClip
+  footsteps are imported when no new audio is assigned.
 - **Door:** assigns opening, closing and latch profiles. Opening/closing sound
-  starts with movement; the latch plays when rotation reaches the target.
+  starts with movement; the latch plays only when the closed rotation is reached.
 - **Rigidbody object:** adds SoundImpact and assigns an impact profile.
 - **Other object:** adds SoundEmitter with an Impact default profile. Trigger
   PlayDefault from your own code, an animation event or UnityEvent.
@@ -158,7 +225,7 @@ Add SoundSurface to floor colliders, or their parent. Assign Footsteps to overri
 the player's default profile. Assign Impacts to change object collision sounds
 against that material. No tags or fixed material names are required.
 
-On the player, Sprint Footstep Gain and Crouch Footstep Gain change loudness;
+On PlayerFootstepAudio, Sprint Footstep Gain and Crouch Footstep Gain change loudness;
 the existing walk/sprint/crouch intervals still control cadence. Footstep Surface
 Mask must include the floor layer. The player's own layer is excluded from the
 ground ray. A layer of gravel/noise can provide crunch without distorting the
@@ -301,15 +368,16 @@ The engine auto-creates one persistent root and reuses the scene's AudioListener
 Do not add extra listeners. Emitter loops stop when their owner disables; scene
 objects clean up their own sources. Master Volume controls engine emitters only.
 
-DialogueVoice keeps its existing syllable generation, filters, pitch planning
-and timing. Its optional Output Mixer field can route it into a shared mixer.
+DialogueVoice keeps its existing syllable generation, per-note shaping, pitch
+planning and timing, while SoundEmitter owns its playback. Its optional Output
+Mixer field can route it into a shared mixer.
 Dialogue and ItemInspector retain ownership of player.isInspecting. The sound
 engine does not take keyboard or mouse input outside the isolated test scene.
 
 There are no pocket or train simulation scripts in this branch, so those have
 not been rewritten. Use the public emitter/impact/train APIs when integrating
-those systems into this branch. Existing dialogue AudioSources do not automatically
-receive emitter environment effects; route them through a mixer if desired.
+those systems into this branch. Dialogue emitters receive environment effects
+when Use Environment is enabled; shared mixer routing remains optional.
 
 ## Practical limits
 
@@ -327,3 +395,205 @@ procedural generator, custom bitcrusher, convolution reverb or automatic sound
 authoring. Replace the test clips with authored audio where realism matters.
 
 Commit scripts, profiles, the test scene, this guide and their .meta files together.
+
+### Player movement and audio separation
+
+Adjust walk, sprint and crouch cadence on **PlayerFootstepAudio**. Assign your clips and effects on its **SoundEmitter**. The Player prefab and audio setup tools include both components. Disabling movement or inspecting an item stops new footsteps; removing PlayerFootstepAudio leaves movement working independently.
+
+## Door audio, sequences and triggers
+
+The Door component now owns motion and UnityEvents only. DoorAudio listens to
+Opening, Closing and Closed. The latch plays only when the door actually reaches
+its closed rotation; changing movement speed does not desynchronise it. Opened
+and Motion Stopped are also available for UnityEvents. Disabling Door cancels its
+motion and pending audio. The existing door prefab is already connected with the
+DoorOpen, DoorClose and Latch starter profiles.
+
+Select a door and use Tools > Horror Audio > Add Sound, Trigger = Door, or
+Set Up Selected Objects. DoorAudio exposes Opening, Closing and Latched. For each
+sound choose a direct Clip, a Profile, or a Sound Sequence. The selection order is
+Sequence, Clip, Profile, then Use Emitter Sound. Direct clips use SoundEmitter's
+EQ/effects; profiles own their effects. Volume and Pitch are per-event multipliers.
+Use Emitter Sound intentionally shares the emitter's clip selection between events.
+For different opening/closing files, assign each Clip on DoorAudio instead.
+
+Create a sequence via Assets > Create > Horror Audio > Sound Sequence. Add Steps
+with Clip or Profile, Volume, Pitch and Delay. Delay is in seconds from sequence
+start, not from the previous step. Steps may be listed in any order. Equal delays
+play together. Example: handle click at 0, metal release at 0.08, creak at 0.15.
+Sequence event volume/pitch multiply each step's values. Profiles can contain
+layers for simultaneous texture. No sample-accurate musical timing is promised;
+sequence timing follows Unity frames. By default pausing the game pauses delays;
+Use Unscaled Time is available on the asset.
+
+SoundSequencePlayer exposes Play, PlaySequence, CancelPending and Stop to
+UnityEvents and animation events. Starting an event replaces pending steps of
+that player, while already playing one-shots finish naturally. Stop also stops
+that player's emitter voices. Disabling the player stops both. Use a dedicated
+emitter/player per independently controlled object; sharing an emitter also
+shares Stop. Door closing completion replaces pending closing details with the
+latch event. Keep details within the motion or drive them from a specific event.
+
+For a zone: create an empty GameObject, use Add Sound with TriggerZone, then set
+Entered and Exited on SoundTrigger. The tool adds a trigger box when no collider
+exists. Resize it to your area. A moving actor needs a CharacterController or a
+Rigidbody/collider setup for Unity trigger callbacks. Required Tag defaults to
+Player and also recognises this project's FPS controller; empty accepts any tag.
+Layers filter entering colliders. Multiple colliders belonging to the same
+Rigidbody/player produce one entry and one final exit. Cooldown and Play Once
+control repeats; ResetTrigger clears them. Stop On Exit cancels playback;
+otherwise an unconfigured exit leaves the entry sound running. Trigger and Stop
+are also callable from UnityEvents or animation events without a zone collider.
+
+For movement-dependent sounds use Door events, animation foot contacts or
+collision events. Use fixed delays for authored detail, rather than predicting
+when a door will finish moving.
+
+An editable example lives at Assets/Audio/Sequences/DoorOpeningExample.asset:
+a short mechanism click, followed by the opening sound after 0.08 seconds.
+Assign it to DoorAudio > Opening > Sequence to try it. Supplying a file in the
+Add Sound door wizard replaces Opening/Closing sequence selections with that
+file; Latched remains independent.
+
+## Scaling audio on the train
+
+Open Assets/Scenes/AudioStressTest.unity and press Play. This isolated test creates
+three train compartments, player footsteps, working doors, 192 configurable
+workload emitters and 128 additional idle emitters. Its generated sounds are
+placeholders; production clips and the player's EQ are not overwritten. Profile
+assets are cloned once and generated clips are warmed and shared for the test.
+
+Controls: WASD/mouse, Shift sprint, Ctrl crouch; F nearest door; +/- workload
+(0, 24, 48, 96, 192); B event burst; O occlusion; R reset measurements; H HUD;
+Up/Down simulated ride speed; Escape release/capture mouse. Voice Budget and
+load settings are editable on the AudioStressDemo component. A workload emitter
+can have multiple layers, so emitter count is not simultaneous voice count.
+
+The HUD distinguishes active admitted layers, Unity virtual voices (a subset
+of active voices), reusable pooled slots, and deferred background loop layers.
+Rejected requests mean capacity was kept for more important/equally audible
+sounds. Stolen voices mean a less important active layer was replaced. Whole-scene
+frame timing includes rendering and Editor work and is not audio CPU time.
+
+### Priorities and capacity
+
+SoundEmitter > Advanced > Priority uses Unity's order: lower numbers are more
+important. -1 inherits the original source priority or profile priority. The
+Player prefab uses 80, door prefab 96, and automatically created dialogue emitters
+32. These are starting points, not reserved channels. Background loops in the
+stress scene use 184-200; object details use 128. A critical cue can use a lower
+number, but assigning everything high priority removes this distinction.
+
+Admission checks the complete event against both emitter and global limits
+before stopping any victims. Lowering a limit at runtime trims the least
+important active layers on the next update. Equal-priority replacement requires a meaningful
+estimated audibility advantage to prevent repeated swapping. The estimate uses
+gain, layer level, simple distance falloff and cached occlusion; it is not a
+measurement of rendered loudness, custom rolloff, or mixer processing. Unity
+still handles its own real/virtual source selection using native priority.
+
+Evicted looping layers defer and resume only when free capacity returns. Their
+approximate playback phase advances using DSP elapsed time and pitch at eviction;
+subsequent pitch changes during suspension are not integrated. This is separate
+from Unity virtualization. A manual Stop, disable or reusing that emitter's final
+free slot cancels its deferred layer. Dedicated background emitters are advised.
+Replacement stops a victim immediately; this pass does not add crossfade tails.
+
+Prewarm Voices prepares a per-emitter reusable pool and does not consume playback
+capacity. Prefer small counts for frequently used footsteps/doors and zero for
+idle objects. Pool slots remain with their emitter until it is destroyed. This
+pass does not implement a shared global pool or shared room reverb buses.
+
+Direct clip/variation/layer arrays are rebuilt only when their contents change.
+Live settings update only profiles currently playing on that emitter. Nearby
+voice controls update each frame, distant ones at 0.1s, native virtual ones at
+0.25s; smoothing uses elapsed time between updates.
+
+### Acoustic work budget
+
+Idle, 2D, and sufficiently quiet/out-of-range voices skip wall checks. Native
+virtual voices skip checks unless a cached obstruction needs refreshing, so
+opening a previously blocking wall can restore the sound. Active near voices use Occlusion Interval (default 0.15s), with slower
+checks at distance and staggered schedules. SoundEngine > Max Occlusion Checks
+Per Frame caps emitter checks across the scene (default 32). Material thickness
+may perform additional collider queries per check, so this is not a total raycast
+count. Waiting emitters retain their last result. Zero disables new checks.
+
+### Measure before selecting a production budget
+
+Compare workload 0, 48 and 192 after warm-up, with occlusion off/on and event
+bursts. Use a Development Build on target hardware with Unity Profiler attached.
+The Audio module provides DSP CPU, memory and native voice data. CPU Timeline
+markers HorrorAudio.Playback, HorrorAudio.ControlUpdate and HorrorAudio.Occlusion
+isolate our control work. Keep HUD hidden when taking final timing samples.
+
+Functional stress checks verify admission limits, priority and cancellation;
+they do not establish a production hardware capacity or a percentage speedup.
+Unity's real/virtual voice settings remain in Project Settings > Audio and are
+not automatically raised by this implementation. Room/door portal propagation,
+shared mixer buses and final production mixing remain separate future work.
+
+### Validation of this optimization pass
+
+Validated with Unity 6000.3.8f1 in the isolated native Editor validation project.
+Admission tests cover atomic layered rejection, priority/distance replacement,
+four-voice dialogue replacement, live budget reductions, and deferred loop
+resumption/cancellation. One thousand warmed default/direct-clip requests reused
+the same prewarmed AudioSources. Idle/2D exclusions, a two-check frame budget,
+fully blocked-source recovery, and stopping deferred world ambience passed.
+
+The stress run created 192 workload emitters plus 128 idle emitters, used a
+48-layer global admission budget and issued a 96-event burst while opening a
+door. Peak admitted voices were 48; peak wall checks observed were 21 against a
+32-check allowance. Door and latch events played, lowering workload to zero
+cleared active/deferred loops, and all eight authored source profiles stayed
+unchanged. These are functional results with generated placeholder sounds,
+not a production DSP/CPU benchmark. Existing sound, imported audio, EQ/room and
+editor setup workflow regressions also passed.
+
+## Walkable cabin listening scene
+
+Open Assets/Scenes/CabinListeningTest.unity and press Play. A furnished single
+compartment and a short corridor are built at runtime. This is a gentle listening
+setup with local running gear, ventilation, window wind, a rattling table bottle,
+a reusable impact ball and a separate corridor comparison speaker. The existing
+Player prefab supplies its footstep files and EQ on the carpet; the corridor uses
+the metal-step profile. Source assets are copied for the session and stay intact.
+
+Controls:
+
+| Control | Action |
+| --- | --- |
+| WASD / mouse | Walk / look |
+| Shift / Ctrl | Sprint / crouch |
+| F, within 3.2 metres | Open or close the compartment door |
+| T | Toggle the steady corridor reference sound |
+| B | Lift and drop the ball in the aisle for a real collision sound |
+| 1 / 2 / 3 / 4 | Toggle wheels / ventilation / window wind / bottle sounds |
+| O / R | Toggle wall damping / room reverb |
+| L | Toggle 24 additional event emitters |
+| Up / Down | Change simulated train speed |
+| P / H | Toggle diagnostics / help |
+| Backspace | Reset measurement counters |
+| Escape | Release or capture mouse; movement pauses while released |
+
+Start with T, walk toward the door, and compare the reference with the door closed
+and open. O temporarily removes obstruction processing for an A/B comparison.
+R compares room reverb; crossing the doorway selects a separate corridor zone.
+The existing direct obstruction/material approximation and room zones drive this
+test; it does not add room/portal path propagation.
+
+The Cabin Listening Test root exposes group volume sliders and Train Speed.
+The probe level also updates live. Pick the generated source object during Play
+to inspect its SoundEmitter and runtime profile. To save sound design, edit the
+assigned source profiles outside Play Mode and restart the scene. Group settings
+on the scene root can be saved normally outside Play Mode. The player audio
+template is optional; clearing it uses the assigned Footsteps profile instead.
+
+Compare listening first with individual groups, then with all groups, and finally
+with L enabled. P shows active/virtual/deferred voices, the pool, overload counts
+and wall checks. Reported frame times include graphics and Editor work. Use the
+Unity Audio Profiler for DSP CPU and memory; use AudioStressTest for heavier
+workloads. The scene's train/air/detail clips are generated placeholders unless
+you supply recordings. Functional validation covers real movement/footsteps,
+closed/open-door filtering, passage, room toggles, budget limits and ball impacts.
