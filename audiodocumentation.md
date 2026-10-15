@@ -1,23 +1,15 @@
-# Adaptive Sound Engine
+# Horror Audio Sound Engine
 
 This system uses Unity's audio playback and effects, with reusable profiles,
 layered sounds, generated samples and optional environment adaptation. Scripts
 are in `Assets/Scripts/Audio`, in the `HorrorAudio` namespace.
 
-## Try it immediately
+## Quick start
 
-Open `Assets/Scenes/AudioTest.unity`, or **Tools > Horror Audio > Open Audio Test
-Scene**, then press Play. The scene generates its own player and geometry.
-
-- WASD: walk; Shift: sprint; Ctrl: crouch.
-- F: open/close the test door.
-- B: drop a ball to test collision sounds.
-- Walk onto the right-hand metal floor: footsteps change, and the environment
-  zone adds reverb and filtering.
-- Up/Down arrows: change simulated train speed and hear the motor respond.
-
-No imported clips are needed. The starter sounds are deliberately simple
-procedural examples, not finished recordings or realistic Foley.
+Select an object and open **Tools > Horror Audio > Add Sound...**. Assign an audio
+file and choose its behaviour, or add a SoundEmitter and assign a reusable
+profile. Use **Preview 2D** to audition it before entering Play Mode. The sections
+below explain player, door, collision, trigger and world ambience integration.
 
 ## Add audio to your game
 
@@ -191,7 +183,7 @@ clip variations, or use **Generator** when its Clips array is empty:
 | Generator | Intended use |
 | --- | --- |
 | None | Recorded clips only; an empty layer is silent |
-| Impact | Short noise/tone transient for test footsteps and hits |
+| Impact | Short noise/tone transient for footsteps and hits |
 | Wind | Filtered noise for wind and air |
 | Hum | Fundamental and harmonic for machines |
 | Creak | Modulated tone/noise for stylized mechanical movement |
@@ -227,8 +219,8 @@ against that material. No tags or fixed material names are required.
 
 On PlayerFootstepAudio, Sprint Footstep Gain and Crouch Footstep Gain change loudness;
 the existing walk/sprint/crouch intervals still control cadence. Footstep Surface
-Mask must include the floor layer. The player's own layer is excluded from the
-ground ray. A layer of gravel/noise can provide crunch without distorting the
+Mask must include the floor layer. The player's own colliders are excluded from
+the ground ray; floors can share the player's layer. A layer of gravel/noise can provide crunch without distorting the
 entire footstep.
 
 ## Object impacts
@@ -361,8 +353,9 @@ Playback uses separate AudioSources per layer, so changing a new sound's pitch
 does not retune an earlier sound. Voice allocation is lazy and reused per emitter.
 Max Voices limits each emitter; SoundEngine Max Active Voices limits simultaneous
 engine playback globally. A layered request is rejected as a whole if it cannot
-fit. The engine does not steal important sounds based on priority; Unity's own
-Priority setting is still forwarded to each AudioSource.
+fit. When capacity is full, the engine can replace lower-priority or substantially
+less audible sounds. Native Unity priority also receives the emitter's resolved
+priority. See Priorities and Capacity below.
 
 The engine auto-creates one persistent root and reuses the scene's AudioListener.
 Do not add extra listeners. Emitter loops stop when their owner disables; scene
@@ -372,7 +365,7 @@ DialogueVoice keeps its existing syllable generation, per-note shaping, pitch
 planning and timing, while SoundEmitter owns its playback. Its optional Output
 Mixer field can route it into a shared mixer.
 Dialogue and ItemInspector retain ownership of player.isInspecting. The sound
-engine does not take keyboard or mouse input outside the isolated test scene.
+engine does not take keyboard or mouse input.
 
 There are no pocket or train simulation scripts in this branch, so those have
 not been rewritten. Use the public emitter/impact/train APIs when integrating
@@ -392,9 +385,11 @@ audio callback uses no Unity API, locks or heap allocation and supports up to
 eight channels. This is not an FMOD/Wwise replacement or
 a full acoustic simulator. It includes no recording/export editor, streaming
 procedural generator, custom bitcrusher, convolution reverb or automatic sound
-authoring. Replace the test clips with authored audio where realism matters.
+authoring. Replace generated starter sounds with authored audio where realism matters.
 
-Commit scripts, profiles, the test scene, this guide and their .meta files together.
+Commit runtime scripts, editor tools, referenced profiles, this guide and their
+.meta files together. Unity caches and local validation artifacts are excluded by
+the project .gitignore.
 
 ### Player movement and audio separation
 
@@ -449,40 +444,25 @@ For movement-dependent sounds use Door events, animation foot contacts or
 collision events. Use fixed delays for authored detail, rather than predicting
 when a door will finish moving.
 
-An editable example lives at Assets/Audio/Sequences/DoorOpeningExample.asset:
-a short mechanism click, followed by the opening sound after 0.08 seconds.
-Assign it to DoorAudio > Opening > Sequence to try it. Supplying a file in the
-Add Sound door wizard replaces Opening/Closing sequence selections with that
-file; Latched remains independent.
+Supplying a file in the Add Sound door wizard replaces Opening/Closing sequence
+selections with that file; Latched remains independent. Create your own sequence
+assets through the Create menu when a sound needs several timed steps.
 
 ## Scaling audio on the train
 
-Open Assets/Scenes/AudioStressTest.unity and press Play. This isolated test creates
-three train compartments, player footsteps, working doors, 192 configurable
-workload emitters and 128 additional idle emitters. Its generated sounds are
-placeholders; production clips and the player's EQ are not overwritten. Profile
-assets are cloned once and generated clips are warmed and shared for the test.
-
-Controls: WASD/mouse, Shift sprint, Ctrl crouch; F nearest door; +/- workload
-(0, 24, 48, 96, 192); B event burst; O occlusion; R reset measurements; H HUD;
-Up/Down simulated ride speed; Escape release/capture mouse. Voice Budget and
-load settings are editable on the AudioStressDemo component. A workload emitter
-can have multiple layers, so emitter count is not simultaneous voice count.
-
-The HUD distinguishes active admitted layers, Unity virtual voices (a subset
-of active voices), reusable pooled slots, and deferred background loop layers.
-Rejected requests mean capacity was kept for more important/equally audible
-sounds. Stolen voices mean a less important active layer was replaced. Whole-scene
-frame timing includes rendering and Editor work and is not audio CPU time.
+SoundEngine manages global voice capacity and a shared acoustic-check allowance.
+SoundEmitter exposes per-object limits, priority, optional prewarming and wall
+check timing in its Advanced Inspector section.
 
 ### Priorities and capacity
 
 SoundEmitter > Advanced > Priority uses Unity's order: lower numbers are more
 important. -1 inherits the original source priority or profile priority. The
 Player prefab uses 80, door prefab 96, and automatically created dialogue emitters
-32. These are starting points, not reserved channels. Background loops in the
-stress scene use 184-200; object details use 128. A critical cue can use a lower
-number, but assigning everything high priority removes this distinction.
+32. These are starting points, not reserved channels. Suggested background
+priorities are 184-200, with ordinary object details around 128. A critical cue
+can use a lower number, but assigning everything high priority removes this
+distinction.
 
 Admission checks the complete event against both emitter and global limits
 before stopping any victims. Lowering a limit at runtime trims the least
@@ -521,79 +501,19 @@ count. Waiting emitters retain their last result. Zero disables new checks.
 
 ### Measure before selecting a production budget
 
-Compare workload 0, 48 and 192 after warm-up, with occlusion off/on and event
-bursts. Use a Development Build on target hardware with Unity Profiler attached.
-The Audio module provides DSP CPU, memory and native voice data. CPU Timeline
-markers HorrorAudio.Playback, HorrorAudio.ControlUpdate and HorrorAudio.Occlusion
-isolate our control work. Keep HUD hidden when taking final timing samples.
+Profile a representative gameplay scene after warm-up, with occlusion off/on
+and bursts of object activity. Use a Development Build on target hardware with
+Unity Profiler attached. The Audio module provides DSP CPU, memory and native
+voice data. CPU Timeline markers HorrorAudio.Playback, HorrorAudio.ControlUpdate
+and HorrorAudio.Occlusion isolate the engine's control work.
 
-Functional stress checks verify admission limits, priority and cancellation;
-they do not establish a production hardware capacity or a percentage speedup.
+SoundEngine exposes ActiveVoiceCount, VirtualVoiceCount (a subset of active
+voices), PooledVoiceCount, DeferredLoopVoiceCount, RejectedPlaybackCount,
+StolenVoiceCount and OcclusionChecksThisFrame/Total for diagnostics. ResetStatistics
+clears its cumulative counters. A replaced or deferred voice is not the same as
+Unity virtualization. Functional checks do not establish a production hardware
+capacity or a percentage speedup.
+
 Unity's real/virtual voice settings remain in Project Settings > Audio and are
 not automatically raised by this implementation. Room/door portal propagation,
 shared mixer buses and final production mixing remain separate future work.
-
-### Validation of this optimization pass
-
-Validated with Unity 6000.3.8f1 in the isolated native Editor validation project.
-Admission tests cover atomic layered rejection, priority/distance replacement,
-four-voice dialogue replacement, live budget reductions, and deferred loop
-resumption/cancellation. One thousand warmed default/direct-clip requests reused
-the same prewarmed AudioSources. Idle/2D exclusions, a two-check frame budget,
-fully blocked-source recovery, and stopping deferred world ambience passed.
-
-The stress run created 192 workload emitters plus 128 idle emitters, used a
-48-layer global admission budget and issued a 96-event burst while opening a
-door. Peak admitted voices were 48; peak wall checks observed were 21 against a
-32-check allowance. Door and latch events played, lowering workload to zero
-cleared active/deferred loops, and all eight authored source profiles stayed
-unchanged. These are functional results with generated placeholder sounds,
-not a production DSP/CPU benchmark. Existing sound, imported audio, EQ/room and
-editor setup workflow regressions also passed.
-
-## Walkable cabin listening scene
-
-Open Assets/Scenes/CabinListeningTest.unity and press Play. A furnished single
-compartment and a short corridor are built at runtime. This is a gentle listening
-setup with local running gear, ventilation, window wind, a rattling table bottle,
-a reusable impact ball and a separate corridor comparison speaker. The existing
-Player prefab supplies its footstep files and EQ on the carpet; the corridor uses
-the metal-step profile. Source assets are copied for the session and stay intact.
-
-Controls:
-
-| Control | Action |
-| --- | --- |
-| WASD / mouse | Walk / look |
-| Shift / Ctrl | Sprint / crouch |
-| F, within 3.2 metres | Open or close the compartment door |
-| T | Toggle the steady corridor reference sound |
-| B | Lift and drop the ball in the aisle for a real collision sound |
-| 1 / 2 / 3 / 4 | Toggle wheels / ventilation / window wind / bottle sounds |
-| O / R | Toggle wall damping / room reverb |
-| L | Toggle 24 additional event emitters |
-| Up / Down | Change simulated train speed |
-| P / H | Toggle diagnostics / help |
-| Backspace | Reset measurement counters |
-| Escape | Release or capture mouse; movement pauses while released |
-
-Start with T, walk toward the door, and compare the reference with the door closed
-and open. O temporarily removes obstruction processing for an A/B comparison.
-R compares room reverb; crossing the doorway selects a separate corridor zone.
-The existing direct obstruction/material approximation and room zones drive this
-test; it does not add room/portal path propagation.
-
-The Cabin Listening Test root exposes group volume sliders and Train Speed.
-The probe level also updates live. Pick the generated source object during Play
-to inspect its SoundEmitter and runtime profile. To save sound design, edit the
-assigned source profiles outside Play Mode and restart the scene. Group settings
-on the scene root can be saved normally outside Play Mode. The player audio
-template is optional; clearing it uses the assigned Footsteps profile instead.
-
-Compare listening first with individual groups, then with all groups, and finally
-with L enabled. P shows active/virtual/deferred voices, the pool, overload counts
-and wall checks. Reported frame times include graphics and Editor work. Use the
-Unity Audio Profiler for DSP CPU and memory; use AudioStressTest for heavier
-workloads. The scene's train/air/detail clips are generated placeholders unless
-you supply recordings. Functional validation covers real movement/footsteps,
-closed/open-door filtering, passage, room toggles, budget limits and ball impacts.

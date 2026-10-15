@@ -1,5 +1,4 @@
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace HorrorAudio.Editor
@@ -86,12 +85,7 @@ namespace HorrorAudio.Editor
                 if (door != null) PrefabUtility.RecordPrefabInstancePropertyModifications(door);
             }
         }
-        [MenuItem("Tools/Horror Audio/Open Audio Test Scene")]
-        public static void OpenTest()
-        {
-            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-                EditorSceneManager.OpenScene("Assets/Scenes/AudioTest.unity");
-        }
+
     }
 
     [CustomEditor(typeof(SoundEmitter))]

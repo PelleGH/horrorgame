@@ -3,6 +3,10 @@
 Conversations with NPCs and objects: a text box with a typewriter effect, optional
 branching choices, per-character styling, and a camera that turns toward the speaker.
 
+For sound creation, EQ/effects, footsteps, doors and audio integration, see
+[Audio documentation](audiodocumentation.md). The system overview is in
+[Game architecture](architecture.md#6-audio-system).
+
 > **Status:** written without running Unity. Compile and play-test before relying on it.
 
 ## Quick start
@@ -52,7 +56,7 @@ Only one dialogue can run at a time. `StartDialogue` returns `false` if one is a
 | `SpeakerProfile.cs` | ScriptableObject for a character's look and voice. |
 | `VoiceSettings.cs` | Serializable settings for a babble voice (blip clips, pitch map, punctuation contours). |
 | `VoiceContour.cs` | Pure logic that turns a line of text into a melody (one `VoiceNote` per character). |
-| `DialogueVoice.cs` | Plays the melody through a small pool of AudioSources. Added by `DialogueManager`. |
+| `DialogueVoice.cs` | Generates and shapes syllables, then plays them through a dedicated SoundEmitter. Added by `DialogueManager`. |
 | `DialogueTrigger.cs` | Component on the world object. Starts dialogue, handles highlight and events. |
 | `DialogueManager.cs` | Singleton that plays dialogue. Owns the UI, input, typewriter, choices, camera focus. |
 | `DialogueState.cs` | Static record of which assets have been played this session. |
@@ -155,7 +159,8 @@ Spaces, punctuation and rich-text tags are never voiced.
 - Try it: in the test scene choose **"Say something."** in the Stranger's conversation. It plays a question, an exclamation, an ellipsis, Swedish letters and tags.
 
 **Why a pool of AudioSources:** `AudioSource.pitch` is per source, so re-pitching one source with `PlayOneShot`
-would also change blips that are still playing. `DialogueVoice` round-robins four sources so each blip keeps its own pitch.
+would also change blips that are still playing. The dialogue's SoundEmitter keeps
+up to four voices and replaces the oldest when full, so each blip keeps its own pitch.
 
 **Skipping:** pressing E mid-line stops the voice immediately.
 
