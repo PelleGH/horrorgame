@@ -94,6 +94,13 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     private Vector3 crouchCenter;
     public bool isInspecting;
     private bool isCrouching;
+
+    /// <summary>Vertical look angle in degrees (positive = looking down).</summary>
+    public float Pitch
+    {
+        get => pitch;
+        set => pitch = Mathf.Clamp(value, -maxLookAngle, maxLookAngle);
+    }
     void Start()
     {
         controller = GetComponent<CharacterController>();
