@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
@@ -9,6 +9,27 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     public float sprintSpeed = 8f;
     public float jumpHeight = 1.2f;
     public float gravity = -20f;
+
+    [Header("Movement Weight")]
+    [Min(0f)] public float acceleration = 12f;
+    [Min(0f)] public float braking = 18f;
+    [Min(0f)] public float directionChangeAcceleration = 20f;
+    [Range(0f, 1f)] public float airControl = 0.2f;
+
+    [Header("Hidden Sprint Stamina")]
+    [Min(0.1f)] public float sprintDuration = 3f;
+    [Min(0.1f)] public float staminaRecoveryDuration = 6f;
+    [Min(0f)] public float staminaRecoveryDelay = 1f;
+    [Range(0.1f, 1f)] public float exhaustedSpeedMultiplier = 0.55f;
+    [Range(0.01f, 1f)] public float lowStaminaThreshold = 0.35f;
+    [Min(0f)] public float fatigueShakeDegrees = 0.35f;
+    [Min(0f)] public float fatigueShakeFrequency = 8f;
+
+    [Header("Heavy Steps")]
+    [Min(0f)] public float stepCameraDip = 0.035f;
+    [Min(0f)] public float landingCameraDip = 0.08f;
+    [Min(0.01f)] public float impactRecoveryTime = 0.12f;
+    [Min(0f)] public float movementCameraLean = 1.2f;
 
     [Header("Crouch")]
     public float crouchSpeed = 2.5f;
@@ -44,13 +65,27 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     public Vector2 crouchPitchRange = new Vector2(0.85f, 0.95f);
 
     private CharacterController controller;
+    private MovingSurfacePassenger movingSurface;
+    private StationaryTrainPassenger trainPassenger;
     private Vector3 velocity;
+    private Vector3 horizontalVelocity;
+    private Vector3 actualHorizontalVelocity;
+    private float cameraBaseY;
+    private float cameraImpact;
+    private float impactVelocity;
+    private float cameraRoll;
+    private bool wasGrounded;
+    private bool hasGroundSample;
+    private float stamina = 1f;
+    private float recoveryDelayRemaining;
+    private bool exhausted;
+    private float fatigueShakeStrength;
+    private float fatigueShakeTime;
     private float pitch = 0f;
 
     private float stepTimer = 0f;
     private int lastFootstepIndex = -1;
     private bool wasMovingLastFrame = false;
-    private bool wasSprintingLastFrame = false;
     private float standingCameraLocalY;
     private float crouchingCameraLocalY;
     private float normalHeight;
@@ -69,11 +104,13 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        movingSurface = GetComponent<MovingSurfacePassenger>();
+        trainPassenger = GetComponent<StationaryTrainPassenger>();
 
         if (cameraTransform != null)
         {
             standingCameraLocalY = cameraTransform.localPosition.y;
-            crouchingCameraLocalY = crouchCenter.y + (crouchHeight * cameraHeightMultiplier * 0.5f);
+            cameraBaseY = standingCameraLocalY;
         }
 
         normalHeight = controller.height;
@@ -99,13 +136,26 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
     void Update()
     {
+        if (movingSurface != null) movingSurface.BeginFrame();
+        if (trainPassenger != null)
+            trainPassenger.Step(Time.deltaTime, controller.isGrounded, isCrouching, horizontalVelocity);
         if (!isInspecting)
         {
             Look();
             Move();
         }
+        else
+        {
+            horizontalVelocity = Vector3.zero;
+            actualHorizontalVelocity = Vector3.zero;
+            stepTimer = 0f;
+            wasMovingLastFrame = false;
+            UpdateStamina(false);
+            if (trainPassenger != null) controller.Move(trainPassenger.ExternalVelocity * Time.deltaTime);
+        }
 
         UpdateCameraHeight();
+        if (movingSurface != null) movingSurface.EndFrame();
     }
 
     void Look()
@@ -129,7 +179,7 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
             Vector3 euler = cameraTransform.localEulerAngles;
             euler.x = pitch;
             euler.y = 0f;
-            euler.z = 0f;
+            euler.z = cameraRoll;
             cameraTransform.localEulerAngles = euler;
         }
     }
@@ -137,6 +187,11 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
     void Move()
     {
         bool grounded = controller.isGrounded;
+        if (hasGroundSample && grounded && !wasGrounded)
+            cameraImpact = Mathf.Max(cameraImpact,
+                landingCameraDip * Mathf.InverseLerp(2f, 12f, -velocity.y));
+        wasGrounded = grounded;
+        hasGroundSample = true;
 
         if (grounded && velocity.y < 0f)
         {
@@ -178,23 +233,89 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
 
         SetCrouchState(crouching);
 
-        bool sprinting = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed && !crouching;
+        bool sprinting = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed
+            && !crouching && !exhausted && stamina > 0f && move.sqrMagnitude > 0f;
 
-        float currentSpeed = crouching ? crouchSpeed : (sprinting ? sprintSpeed : moveSpeed);
+        float walkingSpeed = exhausted ? moveSpeed * exhaustedSpeedMultiplier : moveSpeed;
+        float currentSpeed = crouching ? Mathf.Min(crouchSpeed, walkingSpeed)
+            : (sprinting ? sprintSpeed : walkingSpeed);
 
-        controller.Move(move * currentSpeed * Time.deltaTime);
+        Vector3 targetVelocity = move * currentSpeed;
+        float response = move.sqrMagnitude < 0.001f ? braking : acceleration;
+        if (move.sqrMagnitude > 0f && Vector3.Dot(horizontalVelocity, targetVelocity) < 0f)
+            response = directionChangeAcceleration;
+        if (!grounded) response *= airControl;
+
+        // Momentum stays in world space when the player turns.
+        horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity,
+            Mathf.Max(0f, response) * Time.deltaTime);
+        Vector3 beforeMove = transform.position;
+        Vector3 inheritedVelocity = movingSurface != null ? movingSurface.AirVelocity : Vector3.zero;
+        if (trainPassenger != null) inheritedVelocity += trainPassenger.ExternalVelocity;
+        CollisionFlags collisions = controller.Move((horizontalVelocity + inheritedVelocity) * Time.deltaTime);
+        Vector3 displacement = transform.position - beforeMove;
+        actualHorizontalVelocity = Time.deltaTime > 0f
+            ? new Vector3(displacement.x, 0f, displacement.z) / Time.deltaTime
+            : Vector3.zero;
+        if ((collisions & CollisionFlags.Sides) != 0)
+        {
+            Vector3 remainingInheritedVelocity = movingSurface != null ? movingSurface.AirVelocity : Vector3.zero;
+            if (trainPassenger != null) remainingInheritedVelocity += trainPassenger.ExternalVelocity;
+            horizontalVelocity = actualHorizontalVelocity
+                - new Vector3(remainingInheritedVelocity.x, 0f, remainingInheritedVelocity.z);
+        }
+
+        UpdateStamina(sprinting && actualHorizontalVelocity.magnitude > minMoveThreshold);
 
         bool jumpPressed = Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
         if (jumpPressed && grounded && !crouching)
         {
+            if (movingSurface != null) movingSurface.Detach();
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
 
         velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+        CollisionFlags verticalCollisions = controller.Move(velocity * Time.deltaTime);
+        if ((verticalCollisions & CollisionFlags.Above) != 0 && velocity.y > 0f)
+            velocity.y = 0f;
 
-        bool isMoving = move.magnitude > minMoveThreshold;
-        HandleFootsteps(grounded, isMoving, sprinting, crouching);
+        bool isMoving = actualHorizontalVelocity.magnitude > minMoveThreshold;
+        HandleFootsteps(controller.isGrounded, isMoving, sprinting, crouching);
+    }
+
+    public void ResetMotion()
+    {
+        velocity = Vector3.zero;
+        horizontalVelocity = Vector3.zero;
+        actualHorizontalVelocity = Vector3.zero;
+        hasGroundSample = false;
+        stepTimer = 0f;
+        wasMovingLastFrame = false;
+        if (movingSurface != null) movingSurface.ResetMotion();
+        if (trainPassenger != null) trainPassenger.ResetMotion();
+    }
+
+    void UpdateStamina(bool spending)
+    {
+        if (spending)
+        {
+            stamina = Mathf.Max(0f, stamina - Time.deltaTime / Mathf.Max(0.1f, sprintDuration));
+            recoveryDelayRemaining = Mathf.Max(0f, staminaRecoveryDelay);
+            if (stamina <= 0f)
+            {
+                exhausted = true;
+            }
+        }
+        else
+        {
+            // Recover only for the part of this frame after the delay expires.
+            float recoveryTime = Mathf.Max(0f, Time.deltaTime - recoveryDelayRemaining);
+            recoveryDelayRemaining = Mathf.Max(0f, recoveryDelayRemaining - Time.deltaTime);
+            stamina = Mathf.Min(1f, stamina + recoveryTime / Mathf.Max(0.1f, staminaRecoveryDuration));
+            // Latch exhaustion until fully recovered, even if Shift is held.
+            if (stamina >= 1f)
+                exhausted = false;
+        }
     }
 
     void SetCrouchState(bool crouching)
@@ -241,67 +362,80 @@ public class SimpleFPSControllerNewInput : MonoBehaviour
         Vector3 localPos = cameraTransform.localPosition;
         float targetY = isCrouching ? crouchingCameraLocalY : standingCameraLocalY;
 
-        localPos.y = Mathf.Lerp(localPos.y, targetY, Time.deltaTime * cameraCrouchSmooth);
+        cameraBaseY = Mathf.Lerp(cameraBaseY, targetY,
+            1f - Mathf.Exp(-Mathf.Max(0f, cameraCrouchSmooth) * Time.deltaTime));
+        cameraImpact = Mathf.SmoothDamp(cameraImpact, 0f, ref impactVelocity,
+            Mathf.Max(0.01f, impactRecoveryTime));
+        localPos.y = cameraBaseY - cameraImpact;
+        if (trainPassenger != null) localPos.y += trainPassenger.CameraHeightOffset;
         cameraTransform.localPosition = localPos;
+        float sidewaysSpeed = Vector3.Dot(actualHorizontalVelocity, transform.right);
+        float targetRoll = -sidewaysSpeed / Mathf.Max(0.01f, sprintSpeed) * movementCameraLean;
+        cameraRoll = Mathf.Lerp(cameraRoll, targetRoll, 1f - Mathf.Exp(-8f * Time.deltaTime));
+        Vector3 angles = cameraTransform.localEulerAngles;
+        float fatigue = 1f - Mathf.Clamp01(stamina / Mathf.Max(0.01f, lowStaminaThreshold));
+        float targetShake = isInspecting ? 0f : fatigue * fatigueShakeDegrees;
+        fatigueShakeStrength = Mathf.Lerp(fatigueShakeStrength, targetShake,
+            1f - Mathf.Exp(-6f * Time.deltaTime));
+        fatigueShakeTime += Time.deltaTime * Mathf.Max(0f, fatigueShakeFrequency);
+        // Apply offsets from the base look angles so shake never accumulates.
+        float shakeX = (Mathf.PerlinNoise(fatigueShakeTime, 0.17f) - 0.5f) * 2f * fatigueShakeStrength;
+        float shakeZ = (Mathf.PerlinNoise(0.73f, fatigueShakeTime) - 0.5f) * 2f * fatigueShakeStrength;
+        angles.x = pitch + shakeX;
+        angles.z = cameraRoll + shakeZ;
+        if (trainPassenger != null) angles += trainPassenger.CameraAngles;
+        cameraTransform.localEulerAngles = angles;
     }
 
     void HandleFootsteps(bool grounded, bool isMoving, bool sprinting, bool crouching)
     {
-        if (footstepSource == null || footstepClips == null || footstepClips.Length == 0)
-            return;
-
         if (!grounded || !isMoving)
         {
             stepTimer = 0f;
             wasMovingLastFrame = false;
-            wasSprintingLastFrame = sprinting;
             return;
         }
 
         float currentInterval;
-        float previousInterval;
 
         if (crouching)
         {
             currentInterval = crouchStepInterval;
-            previousInterval = crouchStepInterval;
         }
         else
         {
             currentInterval = sprinting ? sprintStepInterval : walkStepInterval;
-            previousInterval = wasSprintingLastFrame ? sprintStepInterval : walkStepInterval;
         }
 
         if (!wasMovingLastFrame)
         {
             PlayRandomFootstep(crouching);
-            stepTimer = currentInterval;
+            stepTimer = 1f;
         }
         else
         {
-            if (sprinting != wasSprintingLastFrame && previousInterval > 0f)
-            {
-                float progress = 1f - (stepTimer / previousInterval);
-                progress = Mathf.Clamp01(progress);
-                stepTimer = currentInterval * (1f - progress);
-            }
-
-            stepTimer -= Time.deltaTime;
+            // Count step progress from distance traveled, including starts and stops.
+            float referenceSpeed = crouching ? crouchSpeed : (sprinting ? sprintSpeed : moveSpeed);
+            float stepDistance = Mathf.Max(0.05f, referenceSpeed * currentInterval);
+            stepTimer -= actualHorizontalVelocity.magnitude * Time.deltaTime / stepDistance;
 
             if (stepTimer <= 0f)
             {
                 PlayRandomFootstep(crouching);
-                stepTimer = currentInterval;
+                stepTimer = 1f;
             }
         }
 
         wasMovingLastFrame = true;
-        wasSprintingLastFrame = sprinting;
     }
 
     void PlayRandomFootstep(bool crouching)
     {
-        if (footstepClips.Length == 0)
+        float weight = crouching ? 0.45f : Mathf.Lerp(0.65f, 1.35f,
+            Mathf.Clamp01(actualHorizontalVelocity.magnitude / Mathf.Max(0.01f, sprintSpeed)));
+        cameraImpact = Mathf.Max(cameraImpact, stepCameraDip * weight);
+        impactVelocity = 0f;
+        if (footstepSource == null || footstepClips == null || footstepClips.Length == 0)
             return;
 
         int clipIndex = 0;

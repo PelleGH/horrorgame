@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 493b742903854386899c99be540eacbc, type: 3}
+  m_Name: Meadow
+  m_EditorClassIdentifier:
+  hillHeightMultiplier: 0.4
+  hillFrequencyMultiplier: 0.7
+  meadow: {r: 0.43, g: 0.5, b: 0.25, a: 1}
+  distantGrass: {r: 0.55, g: 0.56, b: 0.32, a: 1}
+  foliage: {r: 0.22, g: 0.34, b: 0.18, a: 1}
+  bark: {r: 0.28, g: 0.2, b: 0.13, a: 1}
+  layers:
+  - name: Scattered trees
+    enabled: 1
+    attemptsPerChunk: 14
+    spawnChance: 0.65
+    distanceFromTrack: {x: 15, y: 140}
+    side: 0
+    scale: {x: 0.9, y: 1.1}
+    normalizeHeight: 1
+    height: {x: 5, y: 10}
+    alignToSlope: 0
+    maxSlope: 50
+    surfaceOffset: 0
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 1
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+  - name: Low shrubs
+    enabled: 1
+    attemptsPerChunk: 18
+    spawnChance: 0.8
+    distanceFromTrack: {x: 8, y: 105}
+    side: 0
+    scale: {x: 0.7, y: 2.2}
+    normalizeHeight: 0
+    height: {x: 1, y: 3}
+    alignToSlope: 1
+    maxSlope: 50
+    surfaceOffset: -0.08
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 2
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+  - name: Rare rocks
+    enabled: 1
+    attemptsPerChunk: 6
+    spawnChance: 0.35
+    distanceFromTrack: {x: 10, y: 120}
+    side: 0
+    scale: {x: 0.9, y: 3.4}
+    normalizeHeight: 0
+    height: {x: 1, y: 3}
+    alignToSlope: 1
+    maxSlope: 70
+    surfaceOffset: -0.15
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 3
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1

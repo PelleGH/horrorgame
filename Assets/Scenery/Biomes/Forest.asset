@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 493b742903854386899c99be540eacbc, type: 3}
+  m_Name: Forest
+  m_EditorClassIdentifier:
+  hillHeightMultiplier: 1
+  hillFrequencyMultiplier: 1
+  meadow: {r: 0.32, g: 0.43, b: 0.22, a: 1}
+  distantGrass: {r: 0.46, g: 0.48, b: 0.29, a: 1}
+  foliage: {r: 0.12, g: 0.27, b: 0.19, a: 1}
+  bark: {r: 0.24, g: 0.16, b: 0.105, a: 1}
+  layers:
+  - name: Trees
+    enabled: 1
+    attemptsPerChunk: 46
+    spawnChance: 0.95
+    distanceFromTrack: {x: 10, y: 135}
+    side: 0
+    scale: {x: 0.9, y: 1.1}
+    normalizeHeight: 1
+    height: {x: 5, y: 13}
+    alignToSlope: 0
+    maxSlope: 55
+    surfaceOffset: 0
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 1
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+  - name: Undergrowth
+    enabled: 1
+    attemptsPerChunk: 10
+    spawnChance: 0.8
+    distanceFromTrack: {x: 8, y: 60}
+    side: 0
+    scale: {x: 1.1, y: 2.8}
+    normalizeHeight: 0
+    height: {x: 1, y: 3}
+    alignToSlope: 1
+    maxSlope: 45
+    surfaceOffset: -0.1
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 9
+      builtin: 2
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 3
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+  - name: Rocks
+    enabled: 1
+    attemptsPerChunk: 6
+    spawnChance: 0.55
+    distanceFromTrack: {x: 9, y: 110}
+    side: 0
+    scale: {x: 0.8, y: 3}
+    normalizeHeight: 0
+    height: {x: 1, y: 3}
+    alignToSlope: 1
+    maxSlope: 70
+    surfaceOffset: -0.12
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 3
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
