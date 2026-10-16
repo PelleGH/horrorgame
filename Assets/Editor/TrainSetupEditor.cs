@@ -128,6 +128,7 @@ public class StationaryTrainSimulationEditor : Editor
 {
     public override void OnInspectorGUI()
     {
+<<<<<<< Updated upstream
         serializedObject.Update();
         TrainRideInspector.Group(serializedObject, "Train and affected objects", "trainFrame", "affectedBodyLayers",
             "affectRigidbodies", "objectForceMultiplier", "maximumAcceleration");
@@ -153,6 +154,10 @@ public class StationaryTrainSimulationEditor : Editor
                 AssetDatabase.SaveAssets();
             }
         }
+=======
+        DrawDefaultInspector();
+        StationaryTrainSimulation simulation = (StationaryTrainSimulation)target;
+>>>>>>> Stashed changes
         EditorGUILayout.HelpBox("This train stays stationary. Edit the BoxCollider to cover the carriage interior. "
             + "Dynamic props with gravity inside it receive inertia automatically. Add Stationary Train Passenger "
             + "to your player. +Z of Train Frame is forward.", MessageType.Info);
@@ -187,6 +192,7 @@ public class StationaryTrainSimulationEditor : Editor
     }
 }
 
+<<<<<<< Updated upstream
 public static class TrainRideInspector
 {
     public static void Group(SerializedObject data, string title, params string[] fields)
@@ -285,6 +291,8 @@ public class TrainRideProfileEditor : Editor
     }
 }
 
+=======
+>>>>>>> Stashed changes
 [CustomEditor(typeof(TrainRoute))]
 public class TrainRouteEditor : Editor
 {

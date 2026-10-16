@@ -1035,8 +1035,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 548492542}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalRotation: {x: 0.14492834, y: -0.02819489, z: 0.004131515, w: 0.9890318}
+  m_LocalPosition: {x: -0.76171875, y: 8.260498, z: -28.121094}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5071,6 +5071,7 @@ MonoBehaviour:
   interactLayer:
     serializedVersion: 2
     m_Bits: 64
+  inspectKey: 101
 --- !u!82 &1882241834
 AudioSource:
   m_ObjectHideFlags: 0
@@ -5181,17 +5182,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemInspector
   playerCamera: {fileID: 1335348934}
+  playerController: {fileID: 1882241841}
   inspectRange: 3
   inspectKey: 101
+  cancelKey: 27
   inspectableMask:
     serializedVersion: 2
     m_Bits: 64
+  transitionDuration: 0.28
+  positionSmoothTime: 0.04
+  rotateMouseButton: 0
+  resetRotationKey: 114
+  zoomSpeed: 0.35
+  extraZoomOutDistance: 0.75
   obstructionMask:
     serializedVersion: 2
     m_Bits: 1
-  positionSmoothTime: 0.04
-  rotateMouseButton: 0
-  playerController: {fileID: 1882241841}
 --- !u!114 &1882241841 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8706895932312586567, guid: abd69044b3e401e4da5e37cf5a7463d1, type: 3}

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 # Stationary Train Simulation — User Guide
 
 The train interior stays stationary. Virtual acceleration, braking, turns, hills
@@ -336,3 +337,118 @@ documentation and their `.meta` files to Git.
 
 Use the reusable components in your game. StationaryTrainTestEnvironment is only
 for the demonstration scene.
+=======
+# Stationary train simulation
+
+## Apply to your model
+
+1. Select your train root and choose **GameObject > Train > Add Stationary
+   Simulation to Selected Train**. A child influence BoxCollider is fitted around
+   the model. Adjust its Center and Size to cover only the playable interior.
+2. Keep the model stationary. Disable Train Path Follower and other
+   scripts/animations that move the carriage. The simulation never moves
+   the train or its colliders. Its Train Frame reference defines forward (+Z).
+   An existing carriage Rigidbody is made kinematic so it cannot fall under gravity.
+3. Give floors, walls, tables, and fixed furniture normal colliders. Give loose
+   props colliders and dynamic Rigidbodies with gravity. Any eligible Rigidbody
+   whose center of mass lies inside the box receives simulated forces; it does
+   not need a special script. Affected Body Layers filters which objects qualify.
+4. Select your existing player (the object with CharacterController and the
+   current Player script), then choose **GameObject > Train > Add Stationary
+   Passenger to Selected Player**. It detects the simulation box automatically.
+5. Choose a journey mode and press Play. Save your model plus the influence box
+   as a prefab to reuse the configuration.
+
+Do not use moving-platform inheritance to add the virtual train's forward speed
+to objects or the player: all velocities here are relative to the stationary
+carriage. The existing Moving Surface Passenger may remain for other moving
+platforms; the stationary floor contributes no carrier velocity.
+
+## Journey modes
+
+| Mode | Setup |
+| --- | --- |
+| Random Journey | Set seed, speed range, driving duration, station dwell, bend duration, maximum turn rate, and maximum grade. The train brakes completely before the dwell countdown begins, then departs again. |
+| Timetable | Add named stages with duration, target speed, turn rate, uphill angle, and roughness. A speed of zero requests a stop. Enable Repeat Timetable to repeat. |
+| Manual | Set Cruise Speed, Manual Turn Degrees Per Second, and Manual Uphill Degrees; control start/stop through gameplay. |
+| Virtual Route | Assign the editable Train Route from the earlier system. Its curve supplies bends and grades, but the train model stays still. Open routes stop at their endpoint. |
+
+Durations are simulated seconds, not real-world clock times. Timetable stage
+duration includes acceleration/braking, so allow enough time for speed to reach
+zero if the stage represents a station. External Stop/EmergencyStop pauses
+random/timetable progression until departure resumes. Reset Journey resets the
+simulation clock/motion but does not reset props or the player.
+
+## Tuning movement
+
+- **Acceleration / Braking / Emergency Braking:** how rapidly virtual speed changes.
+- **Maximum Random Turn:** bigger values mean tighter turns and stronger sideways forces.
+- **Turn Response / Grade Response:** smoothness of changes to bends and hills.
+- **Bounce Amplitude / Frequency:** vertical suspension motion (metres / Hz).
+- **Vibration Amplitude / Frequency:** small, faster rail vibrations. Tiny amplitudes
+  are intentional: acceleration grows with frequency squared.
+- **Roughness Multiplier:** increases vertical effects; individual timetable stages
+  also have a roughness value. Bounce/vibration fade with speed and stop at rest.
+- **Bank Degrees Per Turn Rate:** simulated carriage roll through bends.
+- **Include Rotational Forces:** Euler, centrifugal and Coriolis corrections relative
+  to the train root. Center acceleration includes the bend's sideways acceleration.
+- **Object Force Multiplier / Maximum Acceleration:** overall intensity and a force
+  cap to keep extreme settings manageable.
+
+Unity supplies ordinary gravity. The simulation adds acceleration/braking,
+turning, virtual tilt gravity correction, and vertical vibration. It never adds
+ordinary gravity a second time. Multiple overlapping influence boxes choose the
+first enabled containing simulation, so forces are not doubled. Avoid overlapping
+boxes with different journey configurations; for multiple carriages, use one box
+covering the train or keep their settings/timing synchronized.
+
+## Player footing and camera
+
+Stationary Train Passenger exposes force strength, footing resistance, extra
+crouch grip, slip damping, maximum slip speed, camera lean, and camera bounce.
+Weak forces do not overcome grounded footing. Strong braking can slide the
+player; airborne players respond without footing resistance. Camera feedback
+comes from the same simulation and blends with the existing look/crouch/step
+camera. The player's existing gravity remains in use.
+
+All this assumes an upright CharacterController. Floor height/geometry stays
+fixed: hills, banking and suspension are simulated forces and camera feedback,
+not actual deformation/rotation of the carriage. Grounded vertical motion is
+restrained by the floor; this is a controllable gameplay approximation, not a
+full arbitrary-gravity vehicle simulation.
+
+## Collision-box commands
+
+Create a separate object with **Train Simulation Trigger**. Its BoxCollider becomes
+a trigger. You can also use **Create Command Trigger Box** in the simulation's
+Inspector to create and link it automatically. Assign your simulation and choose Start, Stop, EmergencyStop, SetSpeed,
+SetTurn, or SetGrade. By default it responds only to CharacterControllers, with
+an optional actor layer filter and Once Only. Speed/turn/grade commands switch to
+Manual by default so random/timetable targets cannot override them.
+
+The trigger activates when the player physically enters its box in the stationary
+world. It does not represent the virtual train arriving at a world-space station;
+use timetable stages for timed stops. `Activate()` can also be called from buttons
+or UnityEvents, and `ResetTrigger()` allows a once-only trigger to run again.
+
+Simulation methods: `StartTrain()`, `StopTrain()`, `EmergencyStop()`,
+`SetCruiseSpeed(float)`, `SetManualTurn(float)`, `SetManualGrade(float)`.
+On Departed and On Stopped events can drive doors, sound, lighting, or gameplay.
+
+## Test and exterior scenery
+
+Open **StationaryTrainTest.unity**, then press Play. It builds a stationary carriage
+in a compact test lab with bottles, a crate, a ball, and a boarding platform.
+The default repeating timetable demonstrates departure, right and left bends,
+a hill with rough track, and a station stop. There is no moving-train component
+or circular track in this environment.
+Controls: WASD/mouse/Space, B brake, T stop/start, R reset, F1 overview,
+P toggle timetable/random journey (also resets player and props).
+Walk through the red platform pad to activate emergency braking, or the green
+pad to resume travel. These pads demonstrate player collision-box commands.
+Select **Stationary train influence box** during Play to change journey settings.
+
+Exterior scenery scrolling is not generated by this system. `Speed`,
+`TravelDistance`, `TurnRate`, `Grade`, and `VerticalOffset` are available for a
+window-scenery/audio system. Keep scenery motion separate from interior physics.
+>>>>>>> Stashed changes
