@@ -3,6 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
+// Optional spatial steering shared with a stationary train's exterior renderer.
+public interface IStationaryTrainPath
+{
+    void SampleMotion(double distance, float speed, out float turnDegreesPerSecond, out float uphillDegrees);
+}
+
 [AddComponentMenu("Train/Stationary Train Simulation")]
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider))]
@@ -82,6 +88,15 @@ public class StationaryTrainSimulation : MonoBehaviour
 
     public float Speed { get; private set; }
     public float TravelDistance { get; private set; }
+    public double ContinuousTravelDistance { get; private set; }
+    private IStationaryTrainPath motionPath;
+    private bool motionPathChanged;
+    public IStationaryTrainPath MotionPath
+    {
+        get => motionPath;
+        set { if (ReferenceEquals(motionPath, value)) return; motionPath = value; motionPathChanged = true; }
+    }
+    public void RefreshMotionPath() => motionPathChanged = true;
     public float ElapsedTime { get; private set; }
     public float TurnRate { get; private set; }
     public float Grade { get; private set; }
@@ -119,6 +134,7 @@ public class StationaryTrainSimulation : MonoBehaviour
         random = new System.Random(randomSeed);
         Speed = TravelDistance = ElapsedTime = TurnRate = Grade = VerticalOffset = 0f;
         bank = previousPitchRate = previousYawRate = previousBankRate = 0f;
+        motionPathChanged = motionPath != null;
         centerAcceleration = gravityCorrection = angularVelocity = angularAcceleration = Vector3.zero;
         stageIndex = 0;
         stageTimer = 0f;
@@ -134,6 +150,7 @@ public class StationaryTrainSimulation : MonoBehaviour
                 ? Mathf.Repeat(routeStartDistance, virtualRoute.Length)
                 : Mathf.Clamp(routeStartDistance, 0f, virtualRoute.Length);
         }
+        ContinuousTravelDistance = TravelDistance;
         CurrentStage = "Ready";
     }
 
@@ -248,14 +265,34 @@ public class StationaryTrainSimulation : MonoBehaviour
         Speed = Mathf.MoveTowards(Speed, Mathf.Max(0f, targetSpeed), Mathf.Max(0.01f, rate) * dt);
         float distanceStep = (Speed + oldSpeed) * 0.5f * dt;
         TravelDistance += distanceStep;
+        ContinuousTravelDistance += distanceStep;
         if (mode == MotionMode.VirtualRoute && virtualRoute != null && virtualRoute.IsValid)
             TravelDistance = virtualRoute.loop ? Mathf.Repeat(TravelDistance, virtualRoute.Length)
                 : Mathf.Min(TravelDistance, virtualRoute.Length);
         float speedFactor = Mathf.Clamp01(Speed / Mathf.Max(0.1f, cruiseSpeed));
-        TurnRate = Mathf.Lerp(TurnRate, targetTurn * (mode == MotionMode.VirtualRoute ? 1f : speedFactor),
-            1f - Mathf.Exp(-Mathf.Max(0.01f, turnResponse) * dt));
-        Grade = Mathf.Lerp(Grade, targetGrade, 1f - Mathf.Exp(-Mathf.Max(0.01f, gradeResponse) * dt));
+        if (MotionPath != null)
+        {
+            // A shared path already provides spatially smooth steering. Filtering it again
+            // would make inertia lag behind the visible rails, especially while braking.
+            MotionPath.SampleMotion(ContinuousTravelDistance, Speed, out targetTurn, out targetGrade);
+            TurnRate = targetTurn;
+            Grade = targetGrade;
+        }
+        else
+        {
+            TurnRate = Mathf.Lerp(TurnRate, targetTurn * (mode == MotionMode.VirtualRoute ? 1f : speedFactor),
+                1f - Mathf.Exp(-Mathf.Max(0.01f, turnResponse) * dt));
+            Grade = Mathf.Lerp(Grade, targetGrade, 1f - Mathf.Exp(-Mathf.Max(0.01f, gradeResponse) * dt));
+        }
         bank = TurnRate * bankDegreesPerTurnRate;
+        if (motionPathChanged)
+        {
+            // Binding/rebuilding an exterior is an authoring change, not a physical jolt.
+            oldGrade = Grade; oldBank = bank;
+            previousPitchRate = previousBankRate = 0f;
+            previousYawRate = TurnRate * Mathf.Deg2Rad;
+            motionPathChanged = false;
+        }
         float yawRate = TurnRate * Mathf.Deg2Rad;
         float pitchRate = -(Grade - oldGrade) * Mathf.Deg2Rad / dt;
         float bankRate = (bank - oldBank) * Mathf.Deg2Rad / dt;

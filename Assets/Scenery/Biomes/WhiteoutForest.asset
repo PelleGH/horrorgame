@@ -1,0 +1,391 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 493b742903854386899c99be540eacbc, type: 3}
+  m_Name: WhiteoutForest
+  m_EditorClassIdentifier:
+  hillHeightMultiplier: 0.6
+  hillFrequencyMultiplier: 1
+  meadow: {r: 0.72, g: 0.82, b: 0.89, a: 1}
+  distantGrass: {r: 0.56, g: 0.68, b: 0.78, a: 1}
+  foliage: {r: 0.085, g: 0.20, b: 0.145, a: 1}
+  bark: {r: 0.16, g: 0.13, b: 0.11, a: 1}
+  snowCover: .97
+  snowColor: {r: 0.83, g: 0.9, b: 0.95, a: 1}
+  densityMultiplier: 1
+  variation: 0.22
+  microterrainHeight: 0.24
+  microterrainScale: 0.13
+  layers:
+  - name: Dry grasses and seed stalks
+    id: whiteoutforest-grass
+    enabled: 1
+    attemptsPerChunk: 1020
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 3.3, y: 26}
+    side: 0
+    placement: 1
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 3.4
+    minSpacing: 0.24
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 38}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 0.35, y: 1.05}
+    alignToSlope: 1
+    maxSlope: 38
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 9
+      builtin: 4
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1.05, g: 1, b: 0.84, a: 1}
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 8
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 0.8, g: 0.95, b: 0.7, a: 1}
+  - name: Fallen leaf patches
+    id: whiteoutforest-leaves
+    enabled: 1
+    attemptsPerChunk: 156
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 4.1, y: 30}
+    side: 0
+    placement: 1
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 2.8
+    minSpacing: 0.55
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 32}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 0.012, y: 0.035}
+    alignToSlope: 1
+    maxSlope: 32
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 5
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: Fallen branches and logs
+    id: whiteoutforest-branches
+    enabled: 1
+    attemptsPerChunk: 52
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 4.5, y: 38}
+    side: 0
+    placement: 1
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 4
+    minSpacing: 1.25
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 45}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 0.12, y: 0.4}
+    alignToSlope: 1
+    maxSlope: 45
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 9
+      builtin: 6
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1, g: 1, b: 1, a: 1}
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 3
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 0.8, g: 0.9, b: 0.95, a: 1}
+  - name: Fern and low undergrowth
+    id: whiteoutforest-ferns
+    enabled: 1
+    attemptsPerChunk: 54
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 5.2, y: 35}
+    side: 0
+    placement: 1
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 3
+    minSpacing: 0.65
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 38}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 0.4, y: 1.05}
+    alignToSlope: 1
+    maxSlope: 38
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 7
+      builtin: 8
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1, g: 1, b: 1, a: 1}
+    - prefab: {fileID: 0}
+      weight: 3
+      builtin: 2
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 0.85, g: 1, b: 0.9, a: 1}
+  - name: Snow shrubs
+    id: whiteoutforest-shrubs
+    enabled: 1
+    attemptsPerChunk: 48
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 5.4, y: 43}
+    side: 0
+    placement: 1
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 5
+    minSpacing: 1.3
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 50}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 0.9, y: 2.2}
+    alignToSlope: 0
+    maxSlope: 50
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 9
+      builtin: 2
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1, g: 1, b: 1, a: 1}
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 3
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: Near woodland
+    id: whiteoutforest-near-trees
+    enabled: 1
+    attemptsPerChunk: 132
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 7.2, y: 43}
+    side: 0
+    placement: 0
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 5
+    minSpacing: 2.1
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 60}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 10, y: 18}
+    alignToSlope: 0
+    maxSlope: 60
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 11
+      builtin: 1
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1, g: 1, b: 1, a: 1}
+    - prefab: {fileID: 0}
+      weight: 3
+      builtin: 1
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 0.8, g: 1, b: 1.08, a: 1}
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 9
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 0.9, g: 0.95, b: 0.9, a: 1}
+  - name: Young spruces
+    id: whiteoutforest-young-trees
+    enabled: 1
+    attemptsPerChunk: 54
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 5.7, y: 27}
+    side: 0
+    placement: 1
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 4.5
+    minSpacing: 1.4
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 55}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 3.8, y: 8}
+    alignToSlope: 0
+    maxSlope: 55
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 9
+      builtin: 1
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 0.93, g: 1, b: 0.9, a: 1}
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 7
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: Bare and weathered trees
+    id: whiteoutforest-dead-trees
+    enabled: 1
+    attemptsPerChunk: 24
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 7, y: 58}
+    side: 0
+    placement: 0
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 5
+    minSpacing: 2.5
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 65}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 7, y: 15}
+    alignToSlope: 0
+    maxSlope: 65
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 7
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1.12, g: 1.08, b: 1, a: 1}
+  - name: Distant forest layers
+    id: whiteoutforest-far-trees
+    enabled: 1
+    attemptsPerChunk: 162
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 42, y: 145}
+    side: 0
+    placement: 0
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 5
+    minSpacing: 2.8
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 65}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 12, y: 25}
+    alignToSlope: 0
+    maxSlope: 65
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 12
+      builtin: 1
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1, g: 1, b: 1, a: 1}
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 9
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 0.9, g: 1, b: 0.9, a: 1}
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 7
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: Boulders along cuttings
+    id: whiteoutforest-rocks
+    enabled: 1
+    attemptsPerChunk: 18
+    densityMultiplier: 1
+    spawnChance: 0.94
+    distanceFromTrack: {x: 5.5, y: 60}
+    side: 0
+    placement: 1
+    clusterSize: {x: 5, y: 14}
+    clusterRadius: 6
+    minSpacing: 1.4
+    noiseScale: 0.06
+    noiseThreshold: 0.2
+    heightRange: {x: -30, y: 100}
+    slopeRange: {x: 0, y: 70}
+    yawRange: {x: 0, y: 360}
+    tiltDegrees: {x: 0, y: 3}
+    scale: {x: 0.8, y: 1.2}
+    normalizeHeight: 1
+    height: {x: 0.7, y: 2.5}
+    alignToSlope: 0
+    maxSlope: 70
+    surfaceOffset: 0.005
+    prefabs:
+    - prefab: {fileID: 0}
+      weight: 1
+      builtin: 3
+      rotationOffset: {x: 0, y: 0, z: 0}
+      scaleMultiplier: 1
+      tint: {r: 0.87, g: 0.94, b: 1, a: 1}

@@ -6,6 +6,10 @@ Exterior scenery and audio can use the same simulation state to suggest travel.
 
 For the optional train that physically moves, see [TrainIntegration.md](TrainIntegration.md).
 
+For a windowed cabin and a moving procedural exterior, open
+[TrainSceneryTest.unity](TrainSceneryTest.unity). See the
+[rolling scenery guide](../Scenery/README.md) for settings and controls.
+
 ## 1. Test scene
 
 Open [StationaryTrainTest.unity](StationaryTrainTest.unity) and press **Play**.

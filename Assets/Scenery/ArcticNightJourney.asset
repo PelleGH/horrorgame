@@ -1,0 +1,120 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e7304357dee44b793eff1ccd5f131a4, type: 3}
+  m_Name: ArcticNightJourney
+  m_EditorClassIdentifier:
+  randomizeSeedOnStart: 1
+  seed: 1327
+  generatedShader: {fileID: 4800000, guid: 91e01c1bc0ce477eb0fc447a2d7bd41c, type: 3}
+  route:
+    enabled: 1
+    turnStrength: 1
+    maximumHeading: 35
+    turnWavelength: 900
+    hillHeight: 8
+    hillWavelength: 700
+    gradeStrength: 1
+  weather:
+    enabled: 1
+    initialWeather: 0
+    initialWeatherDistance: 350
+    sectionLength: 500
+    transitionDistance: 110
+    snowWeight: 6
+    rainWeight: 2
+    clearWeight: 2
+    intensityRange: {x: 0.55, y: 1}
+    overrides:
+    - name: Freezing rain demonstration
+      startDistance: 650
+      length: 360
+      kind: 1
+      intensity: 0.8
+    - name: Calm forest demonstration
+      startDistance: 1150
+      length: 300
+      kind: 2
+      intensity: 0
+    maxParticles: 3600
+    snowParticlesPerSecond: 490
+    rainParticlesPerSecond: 900
+    snowSize: {x: 0.035, y: 0.11}
+    rainSize: {x: 0.012, y: 0.026}
+    snowFallSpeed: 2.4
+    rainFallSpeed: 17
+    wind: {x: 0.6, y: -0.25}
+    snowFlutter: 0.7
+    visibilityReduction: 0.3
+    tunnelPrecipitation: 0
+  biomes:
+  - biome: {fileID: 11400000, guid: 6b4a184e7ffa4e4b8511f91916847c94, type: 2}
+    weight: 3
+  - biome: {fileID: 11400000, guid: 1e412bbf227f42d791cfd42a3fb22bf4, type: 2}
+    weight: 1
+  biomeLength: 650
+  biomeBlendDistance: 120
+  features:
+  - name: Lakes beside the railway
+    enabled: 1
+    feature: {fileID: 11400000, guid: b3c08077160145ad82c863333e301d4a, type: 2}
+    schedule: 2
+    startDistance: 1400
+    startTime: 0
+    repeatDistance: 2100
+    randomSpacing: {x: 600, y: 1200}
+    chance: 0.2
+    length: 200
+    side: 0
+    offsetFromTrack: 78
+    scale: 1
+    endDistance: 0
+  - name: Tunnel passages
+    enabled: 1
+    feature: {fileID: 11400000, guid: 7f1bd910c139467ca509d8808adc78f9, type: 2}
+    schedule: 2
+    startDistance: 950
+    startTime: 0
+    repeatDistance: 2400
+    randomSpacing: {x: 1000, y: 1800}
+    chance: 0.7
+    length: 180
+    side: 0
+    offsetFromTrack: 0
+    scale: 1
+    endDistance: 0
+  featureLookAhead: 180
+  maxFeaturesPerChunk: 8
+  populationDensity: 1
+  maxCopiesPerPrefabPerChunk: 96
+  maxCustomPrefabInstancesPerChunk: 768
+  maxPlacementAttemptsPerChunk: 8192
+  maxBuiltInVerticesPerChunk: 350000
+  foliageWindStrength: 0.16
+  chunkCount: 9
+  chunkLength: 80
+  halfWidth: 320
+  sideResolution: 26
+  lengthResolution: 18
+  hillHeight: 12
+  hillFrequency: 0.005
+  trackClearance: 4.5
+  treesPerChunk: 64
+  treeHeight: {x: 5, y: 13}
+  treePrefab: {fileID: 0}
+  houseChance: 0.25
+  meadow: {r: 0.32, g: 0.43, b: 0.22, a: 1}
+  distantGrass: {r: 0.46, g: 0.48, b: 0.29, a: 1}
+  foliage: {r: 0.12, g: 0.27, b: 0.19, a: 1}
+  bark: {r: 0.24, g: 0.16, b: 0.105, a: 1}
+  fog: {r: 0.024, g: 0.038, b: 0.063, a: 1}
+  fogStart: 40
+  fogEnd: 190
