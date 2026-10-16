@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-<<<<<<< Updated upstream
 // Optional spatial steering shared with a stationary train's exterior renderer.
 public interface IStationaryTrainPath
 {
     void SampleMotion(double distance, float speed, out float turnDegreesPerSecond, out float uphillDegrees);
 }
 
-=======
->>>>>>> Stashed changes
 [AddComponentMenu("Train/Stationary Train Simulation")]
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider))]
@@ -82,19 +79,15 @@ public class StationaryTrainSimulation : MonoBehaviour
     [Min(0f)] public float roughnessMultiplier = 1f;
     [Range(-1f, 1f)] public float bankDegreesPerTurnRate = 0.15f;
     public bool includeRotationalForces = true;
-<<<<<<< Updated upstream
     [Header("Reusable ride settings")]
     public TrainRideProfile rideProfile;
     public bool applyProfileOnStart = true;
-=======
->>>>>>> Stashed changes
     [Header("Gameplay events")]
     public UnityEvent onDeparted = new UnityEvent();
     public UnityEvent onStopped = new UnityEvent();
 
     public float Speed { get; private set; }
     public float TravelDistance { get; private set; }
-<<<<<<< Updated upstream
     public double ContinuousTravelDistance { get; private set; }
     private IStationaryTrainPath motionPath;
     private bool motionPathChanged;
@@ -104,8 +97,6 @@ public class StationaryTrainSimulation : MonoBehaviour
         set { if (ReferenceEquals(motionPath, value)) return; motionPath = value; motionPathChanged = true; }
     }
     public void RefreshMotionPath() => motionPathChanged = true;
-=======
->>>>>>> Stashed changes
     public float ElapsedTime { get; private set; }
     public float TurnRate { get; private set; }
     public float Grade { get; private set; }
@@ -131,10 +122,7 @@ public class StationaryTrainSimulation : MonoBehaviour
         volume.isTrigger = true;
         Rigidbody carriage = Frame.GetComponentInParent<Rigidbody>();
         if (carriage != null) carriage.isKinematic = true;
-<<<<<<< Updated upstream
         if (applyProfileOnStart && rideProfile != null) rideProfile.ApplyTo(this);
-=======
->>>>>>> Stashed changes
         ResetJourney();
     }
     void OnEnable() { if (!active.Contains(this)) active.Add(this); }
@@ -146,10 +134,7 @@ public class StationaryTrainSimulation : MonoBehaviour
         random = new System.Random(randomSeed);
         Speed = TravelDistance = ElapsedTime = TurnRate = Grade = VerticalOffset = 0f;
         bank = previousPitchRate = previousYawRate = previousBankRate = 0f;
-<<<<<<< Updated upstream
         motionPathChanged = motionPath != null;
-=======
->>>>>>> Stashed changes
         centerAcceleration = gravityCorrection = angularVelocity = angularAcceleration = Vector3.zero;
         stageIndex = 0;
         stageTimer = 0f;
@@ -165,10 +150,7 @@ public class StationaryTrainSimulation : MonoBehaviour
                 ? Mathf.Repeat(routeStartDistance, virtualRoute.Length)
                 : Mathf.Clamp(routeStartDistance, 0f, virtualRoute.Length);
         }
-<<<<<<< Updated upstream
         ContinuousTravelDistance = TravelDistance;
-=======
->>>>>>> Stashed changes
         CurrentStage = "Ready";
     }
 
@@ -283,15 +265,11 @@ public class StationaryTrainSimulation : MonoBehaviour
         Speed = Mathf.MoveTowards(Speed, Mathf.Max(0f, targetSpeed), Mathf.Max(0.01f, rate) * dt);
         float distanceStep = (Speed + oldSpeed) * 0.5f * dt;
         TravelDistance += distanceStep;
-<<<<<<< Updated upstream
         ContinuousTravelDistance += distanceStep;
-=======
->>>>>>> Stashed changes
         if (mode == MotionMode.VirtualRoute && virtualRoute != null && virtualRoute.IsValid)
             TravelDistance = virtualRoute.loop ? Mathf.Repeat(TravelDistance, virtualRoute.Length)
                 : Mathf.Min(TravelDistance, virtualRoute.Length);
         float speedFactor = Mathf.Clamp01(Speed / Mathf.Max(0.1f, cruiseSpeed));
-<<<<<<< Updated upstream
         if (MotionPath != null)
         {
             // A shared path already provides spatially smooth steering. Filtering it again
@@ -315,12 +293,6 @@ public class StationaryTrainSimulation : MonoBehaviour
             previousYawRate = TurnRate * Mathf.Deg2Rad;
             motionPathChanged = false;
         }
-=======
-        TurnRate = Mathf.Lerp(TurnRate, targetTurn * (mode == MotionMode.VirtualRoute ? 1f : speedFactor),
-            1f - Mathf.Exp(-Mathf.Max(0.01f, turnResponse) * dt));
-        Grade = Mathf.Lerp(Grade, targetGrade, 1f - Mathf.Exp(-Mathf.Max(0.01f, gradeResponse) * dt));
-        bank = TurnRate * bankDegreesPerTurnRate;
->>>>>>> Stashed changes
         float yawRate = TurnRate * Mathf.Deg2Rad;
         float pitchRate = -(Grade - oldGrade) * Mathf.Deg2Rad / dt;
         float bankRate = (bank - oldBank) * Mathf.Deg2Rad / dt;
